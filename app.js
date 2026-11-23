@@ -38,7 +38,6 @@ const MODULE_SCHEMAS = {
       { key: 'category', label: 'Kategori', type: 'select', options: ['Venue & Dekorasi', 'Catering', 'Busana & MUA', 'Dokumentasi', 'Undangan & Souvenir', 'KUA / Penghulu', 'Lainnya'], required: true },
       { key: 'item', label: 'Nama Item', type: 'text', required: true },
       { key: 'actual', label: 'Biaya Aktual (Rp)', type: 'currency', default: 0 },
-      { key: 'estimated', label: 'Estimasi Awal (Rp)', type: 'currency', default: 0 },
       { key: 'paid', label: 'Sudah Dibayar (Rp)', type: 'currency', default: 0 },
       { key: 'status', label: 'Status Pembayaran', type: 'select', options: ['Belum Bayar', 'DP', 'Lunas'], default: 'Belum Bayar' },
       { key: 'notes', label: 'Catatan', type: 'text' },
@@ -877,7 +876,7 @@ window.applyWeddingPlan = async (planId, btnEl) => {
           btnEl.textContent = `Menyimpan (${done}/${total})...`;
           const res = await apiCall('upsertItem', {
             module: 'budgets',
-            item: { ...b, actual: 0, paid: 0, status: 'Belum Bayar', notes: plan.name },
+            item: { ...b, actual: b.estimated, paid: 0, status: 'Belum Bayar', notes: plan.name },
           });
           state.data.budgets.push(res.item);
         }
@@ -1014,7 +1013,7 @@ function renderBudgets() {
     .sort((a, b) => (a.status === 'Lunas' ? 1 : 0) - (b.status === 'Lunas' ? 1 : 0));
   $('tbody-budgets').innerHTML = rows.length
     ? rows.map((b) => {
-        const aktual = Number(b.actual || 0);
+        const aktual = Number(b.actual || b.estimated || 0);
         const terbayar = Number(b.paid || 0);
         const sisaEstimasi = Math.max(0, aktual - terbayar);
         return `
@@ -1174,7 +1173,10 @@ function openModal(module, existingItem = null) {
   $('modal-title').textContent = (existingItem ? 'Edit ' : 'Tambah ') + schema.title;
 
   $('modal-fields').innerHTML = schema.fields.map((f) => {
-    const val = existingItem ? (existingItem[f.key] ?? '') : (f.default ?? '');
+    let val = existingItem ? (existingItem[f.key] ?? '') : (f.default ?? '');
+    if (module === 'budgets' && f.key === 'actual' && existingItem && !Number(val)) {
+      val = existingItem.estimated ?? 0;
+    }
     if (f.type === 'select') {
       const opts = f.options.map((o) => `<option value="${escapeHtml(o)}" ${val === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
       return `<div class="field"><label>${escapeHtml(f.label)}</label><select name="${f.key}" ${f.required ? 'required' : ''}>${opts}</select></div>`;
@@ -1569,7 +1571,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const totalCicilan = list.reduce((s, x) => s + Number(x.amount || 0), 0);
           const paidField = ctx.module === 'budgets' ? 'paid' : 'dp_paid';
           const newPaid = Math.max(Number(existing[paidField] || 0) + amount, totalCicilan);
-          const targetTotal = Number(ctx.module === 'budgets' ? (existing.actual || 0) : (existing.price || 0));
+          const targetTotal = Number(ctx.module === 'budgets' ? (existing.actual || existing.estimated || 0) : (existing.price || 0));
           const isAutoLunas = targetTotal > 0 && newPaid >= targetTotal;
           const nextStatus = (existing.status === 'Lunas' || isAutoLunas)
             ? 'Lunas'
