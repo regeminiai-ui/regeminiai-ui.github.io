@@ -43,6 +43,7 @@ function doPost(e) {
     if (action === 'getAll') return jsonResponse({ ok: true, data: handleGetAll_(userId) });
     if (action === 'upsertItem') return jsonResponse({ ok: true, data: handleUpsertItem_(userId, payload) });
     if (action === 'deleteItem') return jsonResponse({ ok: true, data: handleDeleteItem_(userId, payload) });
+    if (action === 'resetUserData') return jsonResponse({ ok: true, data: handleResetUserData_(userId) });
 
     return jsonResponse({ ok: false, error: 'Action tidak dikenal: ' + action });
   } catch (err) {
@@ -295,6 +296,27 @@ function handleDeleteItem_(userId, payload) {
     if (!existing) throw new Error('Data tidak ditemukan.');
     SpreadsheetApp.getActiveSpreadsheet().getSheetByName(mod).deleteRow(existing._rowIndex);
     return { deleted: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleResetUserData_(userId) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let totalDeleted = 0;
+    DATA_MODULES.forEach((mod) => {
+      const sheet = ss.getSheetByName(mod);
+      if (!sheet) return;
+      const rows = readRows_(mod).filter((r) => r.user_id === userId);
+      for (let i = rows.length - 1; i >= 0; i--) {
+        sheet.deleteRow(rows[i]._rowIndex);
+        totalDeleted += 1;
+      }
+    });
+    return { deleted: totalDeleted };
   } finally {
     lock.releaseLock();
   }

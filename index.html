@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
-  <link rel="stylesheet" href="styles.css?v=10" />
+  <link rel="stylesheet" href="styles.css?v=11" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -458,6 +458,14 @@
             </div>
           </form>
         </div>
+
+        <div class="card danger-card form-stack">
+          <h3>Reset Data Akun Ini</h3>
+          <p class="muted">Menghapus semua data Anggaran, Daftar Tamu, Vendor, Checklist, dan Rundown milik akun Anda saja. Akun dan data pengguna lain tidak terpengaruh.</p>
+          <div>
+            <button type="button" id="btn-reset-all" class="btn btn-danger">Reset Semua Data</button>
+          </div>
+        </div>
       </section>
     </main>
   </div>
@@ -479,6 +487,21 @@
     </div>
   </div>
 
-  <script src="app.js?v=10"></script>
+  <!-- CONFIRMATION MODAL -->
+  <div id="confirm-backdrop" class="modal-backdrop confirm-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="confirm-title">Konfirmasi</h3>
+        <button type="button" id="confirm-close" class="icon-btn" aria-label="Tutup">&times;</button>
+      </div>
+      <p id="confirm-message" class="muted"></p>
+      <div class="modal-actions">
+        <button type="button" id="confirm-cancel" class="btn btn-ghost">Batal</button>
+        <button type="button" id="confirm-ok" class="btn btn-primary">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=11"></script>
 </body>
 </html>

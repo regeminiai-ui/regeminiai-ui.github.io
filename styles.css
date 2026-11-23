@@ -716,6 +716,14 @@ tr:last-child td {
   z-index: 100;
 }
 
+.confirm-backdrop {
+  z-index: 120;
+}
+
+.danger-card {
+  margin-top: 20px;
+}
+
 .modal-card {
   width: 100%;
   max-width: 480px;

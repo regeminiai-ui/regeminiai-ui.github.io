@@ -298,6 +298,14 @@ function demoApiCall(action, payload) {
     return { deleted: true };
   }
 
+  if (action === 'resetUserData') {
+    ['budgets', 'guests', 'vendors', 'checklists', 'rundowns'].forEach((m) => {
+      db[m] = db[m].filter((r) => r.user_id !== userId);
+    });
+    saveDemoDb(db);
+    return { deleted: true };
+  }
+
   throw new Error('Aksi tidak dikenal');
 }
 
@@ -637,41 +645,46 @@ window.applyWeddingPlan = async (planId, btnEl) => {
   const msg = hasExisting
     ? `Tambahkan ${plan.budgets.length} pos anggaran dan ${plan.checklists.length} checklist dari ${plan.name} ke data Anda?`
     : `Terapkan ${plan.name} (${plan.budgets.length} pos anggaran & ${plan.checklists.length} checklist)?`;
-  if (!confirm(msg)) return;
 
-  const origText = btnEl.textContent;
-  btnEl.disabled = true;
-  const total = plan.budgets.length + plan.checklists.length;
-  let done = 0;
-
-  try {
-    for (const b of plan.budgets) {
-      done += 1;
-      btnEl.textContent = `Menyimpan (${done}/${total})...`;
-      const res = await apiCall('upsertItem', {
-        module: 'budgets',
-        item: { ...b, actual: 0, paid: 0, status: 'Belum Bayar', notes: plan.name },
-      });
-      state.data.budgets.push(res.item);
-    }
-    for (const c of plan.checklists) {
-      done += 1;
-      btnEl.textContent = `Menyimpan (${done}/${total})...`;
-      const res = await apiCall('upsertItem', {
-        module: 'checklists',
-        item: { ...c, due_date: '', done: 'Belum' },
-      });
-      state.data.checklists.push(res.item);
-    }
-    renderAll();
-    showToast(`${plan.name} berhasil diterapkan! Silakan centang item yang sudah selesai.`);
-    switchTab('budgets');
-  } catch (err) {
-    showToast(err.message, true);
-  } finally {
-    btnEl.disabled = false;
-    btnEl.textContent = origText;
-  }
+  openConfirmModal({
+    title: 'Terapkan Plan',
+    message: msg,
+    confirmText: 'Ya, Terapkan',
+    onConfirm: async () => {
+      const origText = btnEl.textContent;
+      btnEl.disabled = true;
+      const total = plan.budgets.length + plan.checklists.length;
+      let done = 0;
+      try {
+        for (const b of plan.budgets) {
+          done += 1;
+          btnEl.textContent = `Menyimpan (${done}/${total})...`;
+          const res = await apiCall('upsertItem', {
+            module: 'budgets',
+            item: { ...b, actual: 0, paid: 0, status: 'Belum Bayar', notes: plan.name },
+          });
+          state.data.budgets.push(res.item);
+        }
+        for (const c of plan.checklists) {
+          done += 1;
+          btnEl.textContent = `Menyimpan (${done}/${total})...`;
+          const res = await apiCall('upsertItem', {
+            module: 'checklists',
+            item: { ...c, due_date: '', done: 'Belum' },
+          });
+          state.data.checklists.push(res.item);
+        }
+        renderAll();
+        showToast(`${plan.name} berhasil diterapkan! Silakan centang item yang sudah selesai.`);
+        switchTab('budgets');
+      } catch (err) {
+        showToast(err.message, true);
+      } finally {
+        btnEl.disabled = false;
+        btnEl.textContent = origText;
+      }
+    },
+  });
 };
 
 function statusBadge(text) {
@@ -883,21 +896,45 @@ function closeModal() {
   state.modalContext = null;
 }
 
+let confirmActionHandler = null;
+
+function openConfirmModal({ title, message, confirmText = 'Ya, Lanjutkan', isDanger = false, onConfirm }) {
+  $('confirm-title').textContent = title || 'Konfirmasi';
+  $('confirm-message').textContent = message || 'Apakah Anda yakin?';
+  const okBtn = $('confirm-ok');
+  okBtn.textContent = confirmText;
+  okBtn.className = `btn ${isDanger ? 'btn-danger' : 'btn-primary'}`;
+  confirmActionHandler = onConfirm;
+  $('confirm-backdrop').classList.remove('hidden');
+}
+
+function closeConfirmModal() {
+  $('confirm-backdrop').classList.add('hidden');
+  confirmActionHandler = null;
+}
+
 window.openEditModal = (module, id) => {
   const item = state.data[module].find((r) => r.id === id);
   if (item) openModal(module, item);
 };
 
-window.deleteRecord = async (module, id) => {
-  if (!confirm('Hapus data ini?')) return;
-  try {
-    await apiCall('deleteItem', { module, id });
-    state.data[module] = state.data[module].filter((r) => r.id !== id);
-    renderAll();
-    showToast('Data dihapus.');
-  } catch (err) {
-    showToast(err.message, true);
-  }
+window.deleteRecord = (module, id) => {
+  openConfirmModal({
+    title: 'Konfirmasi Hapus',
+    message: 'Data yang dihapus tidak dapat dikembalikan. Yakin ingin menghapus data ini?',
+    confirmText: 'Ya, Hapus',
+    isDanger: true,
+    onConfirm: async () => {
+      try {
+        await apiCall('deleteItem', { module, id });
+        state.data[module] = state.data[module].filter((r) => r.id !== id);
+        renderAll();
+        showToast('Data dihapus.');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    },
+  });
 };
 
 window.toggleBudgetDone = async (id, checked) => {
@@ -1061,50 +1098,113 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (ctx?.type === 'crud') {
       const btn = e.target.querySelector('button[type="submit"]');
-      withButtonLock(btn, 'Menyimpan...', async () => {
-        const item = Object.fromEntries(formData.entries());
-        MODULE_SCHEMAS[ctx.module].fields.forEach((f) => {
-          if (f.type === 'currency') {
-            item[f.key] = parseCurrency(item[f.key]);
+      const item = Object.fromEntries(formData.entries());
+      MODULE_SCHEMAS[ctx.module].fields.forEach((f) => {
+        if (f.type === 'currency') {
+          item[f.key] = parseCurrency(item[f.key]);
+        }
+      });
+      if (ctx.id) item.id = ctx.id;
+
+      const saveCrud = async () => {
+        await withButtonLock(btn, 'Menyimpan...', async () => {
+          try {
+            const res = await apiCall('upsertItem', { module: ctx.module, item });
+            const list = state.data[ctx.module];
+            if (ctx.id) {
+              const idx = list.findIndex((r) => r.id === ctx.id);
+              if (idx !== -1) list[idx] = res.item;
+            } else {
+              list.push(res.item);
+            }
+            renderAll();
+            closeModal();
+            showToast('Data tersimpan.');
+          } catch (err) {
+            showToast(err.message, true);
           }
         });
-        if (ctx.id) item.id = ctx.id;
+      };
+
+      if (ctx.id) {
+        openConfirmModal({
+          title: 'Konfirmasi Perubahan',
+          message: 'Simpan perubahan pada data ini?',
+          confirmText: 'Ya, Simpan',
+          onConfirm: saveCrud,
+        });
+      } else {
+        saveCrud();
+      }
+    }
+  });
+
+  // Confirmation modal listeners
+  $('confirm-close').addEventListener('click', closeConfirmModal);
+  $('confirm-cancel').addEventListener('click', closeConfirmModal);
+  $('confirm-ok').addEventListener('click', () => {
+    const handler = confirmActionHandler;
+    if (!handler) return;
+    withButtonLock($('confirm-ok'), 'Memproses...', async () => {
+      await handler();
+      closeConfirmModal();
+    });
+  });
+
+  // Reset all data for current user
+  $('btn-reset-all').addEventListener('click', () => {
+    openConfirmModal({
+      title: 'Reset Semua Data',
+      message: 'Semua data Anggaran, Tamu, Vendor, Checklist, dan Rundown milik akun Anda akan dihapus permanen. Data akun lain tetap aman. Lanjutkan?',
+      confirmText: 'Ya, Reset Semua',
+      isDanger: true,
+      onConfirm: async () => {
         try {
-          const res = await apiCall('upsertItem', { module: ctx.module, item });
-          const list = state.data[ctx.module];
-          if (ctx.id) {
-            const idx = list.findIndex((r) => r.id === ctx.id);
-            if (idx !== -1) list[idx] = res.item;
-          } else {
-            list.push(res.item);
+          try {
+            await apiCall('resetUserData');
+          } catch (err) {
+            if (String(err.message).includes('Action tidak dikenal')) {
+              for (const mod of ['budgets', 'guests', 'vendors', 'checklists', 'rundowns']) {
+                for (const row of [...state.data[mod]]) {
+                  await apiCall('deleteItem', { module: mod, id: row.id });
+                }
+              }
+            } else {
+              throw err;
+            }
           }
+          state.data = { budgets: [], guests: [], vendors: [], checklists: [], rundowns: [] };
           renderAll();
-          closeModal();
-          showToast('Data tersimpan.');
+          showToast('Semua data akun Anda berhasil direset.');
         } catch (err) {
           showToast(err.message, true);
         }
-      });
-    }
+      },
+    });
   });
 
   // Settings forms
   $('profile-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
-    withButtonLock(btn, 'Menyimpan...', async () => {
-      try {
-        const res = await apiCall('updateProfile', {
-          name: $('set-name').value,
-          partner_name: $('set-partner').value,
-          wedding_date: $('set-date').value,
-        });
-        saveSession(state.token, res.user);
-        renderUserHeader();
-        showToast('Profil diperbarui.');
-      } catch (err) {
-        showToast(err.message, true);
-      }
+    openConfirmModal({
+      title: 'Simpan Profil',
+      message: 'Simpan perubahan profil pernikahan Anda?',
+      confirmText: 'Ya, Simpan',
+      onConfirm: () => withButtonLock(btn, 'Menyimpan...', async () => {
+        try {
+          const res = await apiCall('updateProfile', {
+            name: $('set-name').value,
+            partner_name: $('set-partner').value,
+            wedding_date: $('set-date').value,
+          });
+          saveSession(state.token, res.user);
+          renderUserHeader();
+          showToast('Profil diperbarui.');
+        } catch (err) {
+          showToast(err.message, true);
+        }
+      }),
     });
   });
 
