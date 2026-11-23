@@ -407,15 +407,15 @@ function renderBudgets() {
   $('tbody-budgets').innerHTML = rows.length
     ? rows.map((b) => `
       <tr>
-        <td>${escapeHtml(b.category)}</td>
-        <td><strong>${escapeHtml(b.item)}</strong>${b.notes ? `<div class="muted">${escapeHtml(b.notes)}</div>` : ''}</td>
-        <td>${formatRp(b.estimated)}</td>
-        <td>${formatRp(b.actual)}</td>
-        <td>${formatRp(b.paid)}</td>
-        <td>${statusBadge(b.status)}</td>
-        <td>${actionButtons('budgets', b.id)}</td>
+        <td data-label="Kategori">${escapeHtml(b.category)}</td>
+        <td data-label="Item"><div><strong>${escapeHtml(b.item)}</strong>${b.notes ? `<div class="muted">${escapeHtml(b.notes)}</div>` : ''}</div></td>
+        <td data-label="Estimasi">${formatRp(b.estimated)}</td>
+        <td data-label="Aktual">${formatRp(b.actual)}</td>
+        <td data-label="Terbayar">${formatRp(b.paid)}</td>
+        <td data-label="Status">${statusBadge(b.status)}</td>
+        <td data-label="Aksi" class="td-actions">${actionButtons('budgets', b.id)}</td>
       </tr>`).join('')
-    : '<tr><td colspan="7" class="muted">Belum ada data anggaran.</td></tr>';
+    : '<tr class="empty-row"><td colspan="7" class="muted">Belum ada data anggaran.</td></tr>';
 }
 
 function renderGuests() {
@@ -428,15 +428,15 @@ function renderGuests() {
   $('tbody-guests').innerHTML = rows.length
     ? rows.map((g) => `
       <tr>
-        <td><strong>${escapeHtml(g.name)}</strong>${g.notes ? `<div class="muted">${escapeHtml(g.notes)}</div>` : ''}</td>
-        <td>${escapeHtml(g.side)}</td>
-        <td>${escapeHtml(g.group)}</td>
-        <td>${escapeHtml(g.pax)}</td>
-        <td>${statusBadge(g.rsvp)}</td>
-        <td>${escapeHtml(g.phone || '-')}</td>
-        <td>${actionButtons('guests', g.id)}</td>
+        <td data-label="Nama"><div><strong>${escapeHtml(g.name)}</strong>${g.notes ? `<div class="muted">${escapeHtml(g.notes)}</div>` : ''}</div></td>
+        <td data-label="Pihak">${escapeHtml(g.side)}</td>
+        <td data-label="Grup">${escapeHtml(g.group)}</td>
+        <td data-label="Pax">${escapeHtml(g.pax)}</td>
+        <td data-label="RSVP">${statusBadge(g.rsvp)}</td>
+        <td data-label="No. HP">${escapeHtml(g.phone || '-')}</td>
+        <td data-label="Aksi" class="td-actions">${actionButtons('guests', g.id)}</td>
       </tr>`).join('')
-    : '<tr><td colspan="7" class="muted">Belum ada daftar tamu.</td></tr>';
+    : '<tr class="empty-row"><td colspan="7" class="muted">Belum ada daftar tamu.</td></tr>';
 }
 
 function renderVendors() {
@@ -449,16 +449,16 @@ function renderVendors() {
   $('tbody-vendors').innerHTML = rows.length
     ? rows.map((v) => `
       <tr>
-        <td>${escapeHtml(v.category)}</td>
-        <td><strong>${escapeHtml(v.name)}</strong>${v.notes ? `<div class="muted">${escapeHtml(v.notes)}</div>` : ''}</td>
-        <td>${escapeHtml(v.pic || '-')}</td>
-        <td>${escapeHtml(v.phone || '-')}</td>
-        <td>${formatRp(v.price)}</td>
-        <td>${formatRp(v.dp_paid)}</td>
-        <td>${statusBadge(v.status)}</td>
-        <td>${actionButtons('vendors', v.id)}</td>
+        <td data-label="Kategori">${escapeHtml(v.category)}</td>
+        <td data-label="Vendor"><div><strong>${escapeHtml(v.name)}</strong>${v.notes ? `<div class="muted">${escapeHtml(v.notes)}</div>` : ''}</div></td>
+        <td data-label="PIC">${escapeHtml(v.pic || '-')}</td>
+        <td data-label="Kontak">${escapeHtml(v.phone || '-')}</td>
+        <td data-label="Harga">${formatRp(v.price)}</td>
+        <td data-label="DP">${formatRp(v.dp_paid)}</td>
+        <td data-label="Status">${statusBadge(v.status)}</td>
+        <td data-label="Aksi" class="td-actions">${actionButtons('vendors', v.id)}</td>
       </tr>`).join('')
-    : '<tr><td colspan="8" class="muted">Belum ada data vendor.</td></tr>';
+    : '<tr class="empty-row"><td colspan="8" class="muted">Belum ada data vendor.</td></tr>';
 }
 
 function renderChecklists() {
@@ -467,16 +467,16 @@ function renderChecklists() {
   $('tbody-checklists').innerHTML = rows.length
     ? rows.map((c) => `
       <tr>
-        <td>
+        <td data-label="Selesai">
           <input type="checkbox" ${c.done === 'Selesai' ? 'checked' : ''} onchange="toggleChecklist('${c.id}', this.checked)" />
         </td>
-        <td>${escapeHtml(c.phase)}</td>
-        <td style="${c.done === 'Selesai' ? 'text-decoration:line-through;color:var(--muted)' : ''}">${escapeHtml(c.task)}</td>
-        <td>${escapeHtml(c.pic || '-')}</td>
-        <td>${escapeHtml(c.due_date || '-')}</td>
-        <td>${actionButtons('checklists', c.id)}</td>
+        <td data-label="Tahap">${escapeHtml(c.phase)}</td>
+        <td data-label="Tugas" style="${c.done === 'Selesai' ? 'text-decoration:line-through;color:var(--muted)' : ''}">${escapeHtml(c.task)}</td>
+        <td data-label="PIC">${escapeHtml(c.pic || '-')}</td>
+        <td data-label="Target">${escapeHtml(c.due_date || '-')}</td>
+        <td data-label="Aksi" class="td-actions">${actionButtons('checklists', c.id)}</td>
       </tr>`).join('')
-    : '<tr><td colspan="6" class="muted">Belum ada tugas checklist.</td></tr>';
+    : '<tr class="empty-row"><td colspan="6" class="muted">Belum ada tugas checklist.</td></tr>';
 }
 
 function renderRundowns() {
@@ -487,15 +487,15 @@ function renderRundowns() {
   $('tbody-rundowns').innerHTML = rows.length
     ? rows.map((r) => `
       <tr>
-        <td>${escapeHtml(r.event_name)}</td>
-        <td>${escapeHtml(r.start_time)} - ${escapeHtml(r.end_time)}</td>
-        <td><strong>${escapeHtml(r.activity)}</strong></td>
-        <td>${escapeHtml(r.pic || '-')}</td>
-        <td>${escapeHtml(r.location || '-')}</td>
-        <td>${escapeHtml(r.notes || '-')}</td>
-        <td>${actionButtons('rundowns', r.id)}</td>
+        <td data-label="Sesi">${escapeHtml(r.event_name)}</td>
+        <td data-label="Waktu">${escapeHtml(r.start_time)} - ${escapeHtml(r.end_time)}</td>
+        <td data-label="Kegiatan"><strong>${escapeHtml(r.activity)}</strong></td>
+        <td data-label="PIC">${escapeHtml(r.pic || '-')}</td>
+        <td data-label="Lokasi">${escapeHtml(r.location || '-')}</td>
+        <td data-label="Catatan">${escapeHtml(r.notes || '-')}</td>
+        <td data-label="Aksi" class="td-actions">${actionButtons('rundowns', r.id)}</td>
       </tr>`).join('')
-    : '<tr><td colspan="7" class="muted">Belum ada jadwal rundown.</td></tr>';
+    : '<tr class="empty-row"><td colspan="7" class="muted">Belum ada jadwal rundown.</td></tr>';
 }
 
 // --- CRUD Modal & Actions ---
