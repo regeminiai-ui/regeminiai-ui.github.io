@@ -716,6 +716,7 @@ function renderPricingShowcase(pricingData) {
       features: [
         'Masa Aktif 13 Bulan (12 + 1 Bonus)',
         'Semua Fitur Medium',
+        'Tema Eksklusif Glassmorphism (Light & Dark)',
         'Link QR & Undangan Personal per Tamu',
         'Tanpa Watermark di Halaman Check-In',
         'Custom Folder Google Drive Pribadi',
@@ -853,6 +854,7 @@ function getTierCaps() {
     receipts: t !== 'sederhana',
     cicilan: t !== 'sederhana',
     darkMode: t !== 'sederhana',
+    glassTheme: t === 'rich',
     qrGeneral: t !== 'sederhana',
     qrPersonal: t === 'rich',
     customDrive: t === 'rich',
@@ -903,6 +905,12 @@ function applyTierUi() {
   document.querySelector('[data-tab="assets"]')?.classList.toggle('hidden', !caps.assets);
   $('btn-theme-toggle')?.classList.toggle('hidden', !caps.darkMode);
   if (!caps.darkMode) applyTheme('light');
+  $('btn-glass-toggle')?.classList.toggle('hidden', !caps.glassTheme);
+  if (!caps.glassTheme) {
+    applyUiStyle('default');
+  } else {
+    applyUiStyle(localStorage.getItem('nikahplan_ui_style') || 'default');
+  }
   $('btn-show-qr')?.classList.toggle('hidden', !caps.qrGeneral);
   document.querySelector('.activity-card')?.classList.toggle('hidden', !caps.auditLog);
   $('set-partner-email')?.closest('.field')?.classList.toggle('hidden', !caps.collab);
@@ -2272,6 +2280,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initTheme();
   $('btn-theme-toggle').addEventListener('click', toggleTheme);
+  $('btn-glass-toggle')?.addEventListener('click', toggleUiStyle);
 
   const params = new URLSearchParams(window.location.search);
   const guestCheckinUserId = params.get('guest_checkin');
@@ -2773,6 +2782,20 @@ function toggleTheme() {
   const next = cur === 'dark' ? 'light' : 'dark';
   localStorage.setItem('nikahplan_theme', next);
   applyTheme(next);
+}
+
+function applyUiStyle(style) {
+  const isGlass = style === 'glass';
+  document.documentElement.setAttribute('data-ui-style', isGlass ? 'glass' : 'default');
+  const lbl = $('glass-toggle-label');
+  if (lbl) lbl.textContent = isGlass ? 'Tema: Glassmorphism' : 'Tema: Default';
+}
+
+function toggleUiStyle() {
+  const cur = document.documentElement.getAttribute('data-ui-style') === 'glass' ? 'glass' : 'default';
+  const next = cur === 'glass' ? 'default' : 'glass';
+  localStorage.setItem('nikahplan_ui_style', next);
+  applyUiStyle(next);
 }
 
 function getCheckinUrl() {

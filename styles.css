@@ -61,6 +61,80 @@
   }
 }
 
+/* --- Rich Exclusive: Glassmorphism Theme (Light & Dark) --- */
+[data-ui-style="glass"] {
+  --surface: rgba(255, 255, 255, 0.56);
+  --surface-alt: rgba(255, 255, 255, 0.38);
+  --border: rgba(255, 255, 255, 0.72);
+  --border-soft: rgba(184, 93, 105, 0.22);
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 8px 32px rgba(56, 43, 38, 0.1);
+  --shadow-sm: 0 4px 16px rgba(56, 43, 38, 0.08);
+}
+
+[data-ui-style="glass"] body {
+  background-color: #f9eff2;
+  background-image:
+    radial-gradient(at 15% 15%, rgba(251, 207, 217, 0.75) 0px, transparent 50%),
+    radial-gradient(at 85% 20%, rgba(221, 214, 254, 0.65) 0px, transparent 50%),
+    radial-gradient(at 50% 88%, rgba(209, 250, 229, 0.6) 0px, transparent 55%);
+  background-attachment: fixed;
+}
+
+[data-ui-style="glass"] .card,
+[data-ui-style="glass"] .sidebar,
+[data-ui-style="glass"] .modal,
+[data-ui-style="glass"] .stat-card,
+[data-ui-style="glass"] .table-wrap,
+[data-ui-style="glass"] .topbar,
+[data-ui-style="glass"] .promo-banner {
+  backdrop-filter: blur(18px) saturate(165%);
+  -webkit-backdrop-filter: blur(18px) saturate(165%);
+}
+
+[data-ui-style="glass"] input,
+[data-ui-style="glass"] select,
+[data-ui-style="glass"] textarea {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+}
+
+[data-ui-style="glass"] .nav-item.active {
+  background: rgba(184, 93, 105, 0.18);
+  border-color: rgba(184, 93, 105, 0.35);
+}
+
+[data-theme="dark"][data-ui-style="glass"] {
+  --surface: rgba(36, 28, 34, 0.56);
+  --surface-alt: rgba(52, 40, 48, 0.45);
+  --border: rgba(255, 255, 255, 0.14);
+  --border-soft: rgba(255, 255, 255, 0.1);
+  --shadow: 0 10px 36px rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.32);
+}
+
+[data-theme="dark"][data-ui-style="glass"] body {
+  background-color: #161116;
+  background-image:
+    radial-gradient(at 15% 15%, rgba(157, 23, 77, 0.28) 0px, transparent 50%),
+    radial-gradient(at 85% 20%, rgba(88, 28, 135, 0.25) 0px, transparent 50%),
+    radial-gradient(at 50% 88%, rgba(6, 95, 70, 0.24) 0px, transparent 55%);
+  background-attachment: fixed;
+}
+
+[data-theme="dark"][data-ui-style="glass"] input,
+[data-theme="dark"][data-ui-style="glass"] select,
+[data-theme="dark"][data-ui-style="glass"] textarea {
+  background: rgba(20, 16, 20, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+[data-theme="dark"][data-ui-style="glass"] .nav-item.active {
+  background: rgba(209, 116, 128, 0.22);
+  border-color: rgba(209, 116, 128, 0.38);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
