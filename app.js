@@ -742,7 +742,7 @@ function renderPricingShowcase(pricingData) {
             <span class="price-original">${formatPriceRp(normalPrice)}</span>
             <span class="price-discount-pill">-${discountPct}%</span>
           </div>
-          <div class="price-tag">${formatPriceRp(promoPrice)} <span class="price-duration">/ ${t.duration}</span></div>
+          <div class="price-tag is-promo">${formatPriceRp(promoPrice)} <span class="price-duration">/ ${t.duration}</span></div>
         </div>`
       : `
         <div class="price-block">
@@ -754,12 +754,12 @@ function renderPricingShowcase(pricingData) {
 
     return `
       <div class="card pricing-card${t.featured ? ' featured' : ''}${hasPromo ? ' has-promo' : ''}">
+        ${badgeText ? `<div class="pricing-ribbon ${hasPromo || customLabel ? 'is-promo' : 'is-default'}">${escapeHtml(badgeText)}</div>` : ''}
         <div class="pricing-card-head">
           <div>
             <h4>${escapeHtml(t.name)}</h4>
             <p class="pricing-sub">${escapeHtml(t.subtitle)}</p>
           </div>
-          ${badgeText ? `<span class="badge ${hasPromo || customLabel ? 'badge-promo' : 'badge-ok'}">${escapeHtml(badgeText)}</span>` : ''}
         </div>
         ${priceHtml}
         <ul class="pricing-features">${t.features.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>

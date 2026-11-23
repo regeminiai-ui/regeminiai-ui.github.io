@@ -191,14 +191,16 @@ h1, h2, h3, .brand-title {
 }
 
 .pricing-card {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .pricing-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
 }
 
 .pricing-card.featured {
@@ -206,11 +208,38 @@ h1, h2, h3, .brand-title {
   box-shadow: 0 6px 0 var(--primary);
 }
 
+.pricing-ribbon {
+  position: absolute;
+  top: 18px;
+  right: -36px;
+  width: 145px;
+  padding: 5px 0;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  transform: rotate(35deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.pricing-ribbon.is-promo {
+  background: linear-gradient(135deg, #ef4444, #be123c);
+}
+
+.pricing-ribbon.is-default {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+}
+
 .pricing-card-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  padding-right: 48px;
 }
 
 .pricing-card-head h4 {
@@ -276,6 +305,37 @@ h1, h2, h3, .brand-title {
 
 .pricing-cta {
   margin-top: auto;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, filter 0.22s ease;
+}
+
+.pricing-cta::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.38), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.55s ease;
+  pointer-events: none;
+}
+
+.pricing-cta:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(190, 18, 60, 0.28);
+  filter: brightness(1.05);
+}
+
+.pricing-cta:hover::after {
+  left: 140%;
+}
+
+.pricing-cta:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 2px 6px rgba(190, 18, 60, 0.2);
 }
 
 .badge-promo {
@@ -312,13 +372,30 @@ h1, h2, h3, .brand-title {
   font-size: 2rem;
   font-weight: 700;
   color: var(--primary);
-  line-height: 1;
+  line-height: 1.05;
+}
+
+.price-tag.is-promo {
+  font-size: 2.35rem;
+  color: #16a34a;
+}
+
+[data-theme="dark"] .price-tag.is-promo {
+  color: #4ade80;
 }
 
 .price-original {
-  font-size: 0.95rem;
-  color: var(--muted);
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: #ef4444;
   text-decoration: line-through;
+  text-decoration-color: #ef4444;
+  text-decoration-thickness: 2px;
+}
+
+[data-theme="dark"] .price-original {
+  color: #f87171;
+  text-decoration-color: #f87171;
 }
 
 .price-promo-row {
