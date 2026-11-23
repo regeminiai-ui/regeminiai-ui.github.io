@@ -459,20 +459,77 @@ h1, h2, h3, .brand-title {
 
 .auth-wrapper.with-pricing {
   align-items: flex-start;
-  max-width: 1420px;
+  max-width: 1640px;
+  padding: 20px 14px;
+  gap: 18px;
   margin: 0 auto;
 }
 
 .auth-wrapper.with-pricing .auth-card {
   flex-shrink: 0;
+  width: 340px;
   position: sticky;
-  top: 24px;
+  top: 20px;
 }
 
 .pricing-showcase {
   flex: 1;
   min-width: 0;
-  max-width: 960px;
+  max-width: none;
+}
+
+@media (min-width: 1180px) {
+  .pricing-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+.pricing-card.is-konglo {
+  background: linear-gradient(155deg, #171126 0%, #261942 52%, #130e20 100%);
+  border-color: #d4af37;
+  color: #faf5ff;
+  box-shadow: 0 8px 24px rgba(38, 25, 66, 0.32), inset 0 1px 0 rgba(251, 191, 36, 0.28);
+}
+
+.pricing-card.is-konglo:hover {
+  border-color: #fbbf24;
+  box-shadow: 0 6px 0 #d4af37, 0 12px 30px rgba(212, 175, 55, 0.28);
+}
+
+.pricing-card.is-konglo .pricing-sub {
+  color: #cbb8e8;
+}
+
+.pricing-card.is-konglo .price-block {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+.pricing-card.is-konglo .price-tag {
+  color: #fde68a;
+}
+
+.pricing-card.is-konglo .price-tag.is-promo {
+  color: #4ade80;
+}
+
+.pricing-card.is-konglo .pricing-features li::before {
+  color: #fbbf24;
+}
+
+.pricing-card.is-konglo .pricing-cta {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-color: #fde68a;
+  color: #1e1204;
+  font-weight: 700;
+}
+
+.pricing-ribbon.is-konglo {
+  background: linear-gradient(110deg, #6d28d9 0%, #a855f7 35%, #fbbf24 70%, #6d28d9 100%);
+  background-size: 200% 100%;
+  color: #fff;
+  animation: goldShimmer 3s linear infinite;
 }
 
 .field-label-row {

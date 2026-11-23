@@ -838,6 +838,7 @@ function renderPricingShowcase(pricingData) {
     const customLabel = (cfg.promo_label || '').trim();
     const badgeText = customLabel || (hasPromo ? `Hemat ${discountPct}%` : t.defaultBadge);
     const isBestSeller = /best\s*seller/i.test(badgeText);
+    const isKonglo = t.key === 'konglo';
 
     const priceHtml = hasPromo
       ? `
@@ -856,9 +857,13 @@ function renderPricingShowcase(pricingData) {
     const waMsg = encodeURIComponent(`Halo Admin Ahmad Husain, saya mau beli paket ${t.name} My Weeding Plan (${formatPriceRp(effectivePrice)}).`);
     const waUrl = `https://wa.me/6289509901360?text=${waMsg}`;
 
+    const ribbonCls = isBestSeller
+      ? 'is-best-seller'
+      : (isKonglo ? 'is-konglo' : (hasPromo || customLabel ? 'is-promo' : 'is-default'));
+
     return `
-      <div class="card pricing-card${t.featured ? ' featured' : ''}${hasPromo ? ' has-promo' : ''}${isBestSeller ? ' is-best-seller' : ''}">
-        ${badgeText ? `<div class="pricing-ribbon ${isBestSeller ? 'is-best-seller' : (hasPromo || customLabel ? 'is-promo' : 'is-default')}">${escapeHtml(badgeText)}</div>` : ''}
+      <div class="card pricing-card${t.featured ? ' featured' : ''}${hasPromo ? ' has-promo' : ''}${isBestSeller ? ' is-best-seller' : ''}${isKonglo ? ' is-konglo' : ''}">
+        ${badgeText ? `<div class="pricing-ribbon ${ribbonCls}">${escapeHtml(badgeText)}</div>` : ''}
         <div class="pricing-card-head">
           <div>
             <h4>${escapeHtml(t.name)}</h4>
