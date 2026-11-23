@@ -196,6 +196,32 @@ function demoApiCall(action, payload) {
     return { token: 'demo_' + user.id, user: safeUser };
   }
 
+  if (action === 'publicEventInfo') {
+    const u = db.users.find((x) => x.id === payload.user_id);
+    if (!u) throw new Error('Acara tidak ditemukan.');
+    return { name: u.name, partner_name: u.partner_name, wedding_date: u.wedding_date };
+  }
+
+  if (action === 'publicCheckin') {
+    const u = db.users.find((x) => x.id === payload.user_id);
+    if (!u) throw new Error('Acara tidak ditemukan.');
+    const g = {
+      id: uid(),
+      user_id: u.id,
+      name: payload.name,
+      side: 'Umum',
+      group: payload.group || 'Teman',
+      pax: Number(payload.pax || 1),
+      rsvp: 'Hadir',
+      phone: payload.phone || '',
+      notes: payload.notes || '',
+      updated_at: new Date().toISOString(),
+    };
+    db.guests.push(g);
+    saveDemoDb(db);
+    return { guest: g };
+  }
+
   // Authenticated actions in demo mode
   const userId = state.token.replace('demo_', '');
   const currentUser = db.users.find((u) => u.id === userId);
@@ -685,6 +711,7 @@ function openModal(module, existingItem = null) {
     return `<div class="field"><label>${escapeHtml(f.label)}</label><input type="${f.type}" name="${f.key}" value="${escapeHtml(val)}" ${f.min !== undefined ? `min="${f.min}"` : ''} ${f.required ? 'required' : ''} /></div>`;
   }).join('');
 
+  document.querySelector('#modal-form .modal-actions').classList.remove('hidden');
   $('modal-backdrop').classList.remove('hidden');
 }
 
@@ -698,6 +725,7 @@ function openApiConfigModal() {
       <input type="url" name="apiUrl" value="${escapeHtml(state.apiUrl)}" placeholder="https://script.google.com/macros/s/.../exec" />
     </div>
   `;
+  document.querySelector('#modal-form .modal-actions').classList.remove('hidden');
   $('modal-backdrop').classList.remove('hidden');
 }
 
@@ -860,6 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('modal-close').addEventListener('click', closeModal);
   $('modal-cancel').addEventListener('click', closeModal);
   $('btn-open-api-config').addEventListener('click', openApiConfigModal);
+  $('btn-show-qr').addEventListener('click', openGuestQrModal);
 
   $('modal-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -932,5 +961,90 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-refresh').addEventListener('click', loadAllData);
   $('btn-logout').addEventListener('click', () => logout(true));
 
-  renderAuthOrApp();
+  const checkinUserId = new URLSearchParams(window.location.search).get('checkin');
+  if (checkinUserId) {
+    initCheckinView(checkinUserId);
+  } else {
+    renderAuthOrApp();
+  }
 });
+
+function getCheckinUrl() {
+  const base = window.location.origin + window.location.pathname;
+  return `${base}?checkin=${encodeURIComponent(state.user.id)}`;
+}
+
+function openGuestQrModal() {
+  if (!state.user?.id) return;
+  const checkinUrl = getCheckinUrl();
+  const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(checkinUrl)}`;
+  state.modalContext = { type: 'qr' };
+  $('modal-title').textContent = 'QR Absensi Tamu (1 Untuk Semua)';
+  $('modal-fields').innerHTML = `
+    <div class="qr-box">
+      <p class="muted">Tamu cukup scan QR ini dengan kamera HP untuk langsung mengisi kehadiran (tanpa login).</p>
+      <img class="qr-img" src="${qrImgUrl}" alt="QR Code Absensi Tamu" />
+      <div class="qr-url-box">${escapeHtml(checkinUrl)}</div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-outline" onclick="copyCheckinUrl('${escapeHtml(checkinUrl)}')">Salin Link</button>
+        <a class="btn btn-primary" href="${escapeHtml(checkinUrl)}" target="_blank" rel="noopener">Buka Halaman Scan</a>
+      </div>
+    </div>
+  `;
+  document.querySelector('#modal-form .modal-actions').classList.add('hidden');
+  $('modal-backdrop').classList.remove('hidden');
+}
+
+window.copyCheckinUrl = async (url) => {
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('Link absensi berhasil disalin!');
+  } catch {
+    showToast('Gagal menyalin, salin manual dari kotak link.', true);
+  }
+};
+
+async function initCheckinView(userId) {
+  $('auth-view').classList.add('hidden');
+  $('app-view').classList.add('hidden');
+  $('checkin-view').classList.remove('hidden');
+
+  try {
+    const info = await apiCall('publicEventInfo', { user_id: userId });
+    $('checkin-couple').textContent = `${info.name} & ${info.partner_name}`;
+    const dateStr = normalizeDateStr(info.wedding_date);
+    $('checkin-date').textContent = dateStr ? `Buku Tamu • ${dateStr}` : 'Buku Tamu Pernikahan';
+  } catch (err) {
+    showToast(err.message, true);
+  }
+
+  $('checkin-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('btn-checkin-submit');
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+    try {
+      await apiCall('publicCheckin', {
+        user_id: userId,
+        name: $('ci-name').value.trim(),
+        pax: $('ci-pax').value,
+        group: $('ci-group').value,
+        phone: $('ci-phone').value.trim(),
+        notes: $('ci-notes').value.trim(),
+      });
+      $('checkin-form').classList.add('hidden');
+      $('checkin-success').classList.remove('hidden');
+    } catch (err) {
+      showToast(err.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Konfirmasi Hadir';
+    }
+  });
+
+  $('btn-checkin-again').addEventListener('click', () => {
+    $('checkin-form').reset();
+    $('checkin-success').classList.add('hidden');
+    $('checkin-form').classList.remove('hidden');
+  });
+}

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
-  <link rel="stylesheet" href="styles.css?v=6" />
+  <link rel="stylesheet" href="styles.css?v=7" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -71,6 +71,54 @@
 
       <div class="auth-footer">
         <button type="button" id="btn-open-api-config" class="link-btn">Konfigurasi URL Google Apps Script</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PUBLIC GUEST CHECK-IN VIEW (QR SCAN) -->
+  <section id="checkin-view" class="auth-wrapper hidden">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.7-9.2-9C1.5 8.1 3.7 4.8 7 4.8c1.9 0 3.6 1 5 2.7 1.4-1.7 3.1-2.7 5-2.7 3.3 0 5.5 3.3 4.2 6.7-1.7 4.3-9.2 9-9.2 9z"/></svg>
+        </span>
+        <h1 id="checkin-couple">Buku Tamu Pernikahan</h1>
+        <p id="checkin-date" class="muted">Silakan isi kehadiran Anda</p>
+      </div>
+
+      <form id="checkin-form" class="auth-form">
+        <div class="field">
+          <label for="ci-name">Nama Lengkap</label>
+          <input id="ci-name" type="text" required placeholder="Contoh: Budi Santoso" />
+        </div>
+        <div class="field">
+          <label for="ci-pax">Jumlah Tamu Hadir (Pax)</label>
+          <input id="ci-pax" type="number" min="1" value="1" required />
+        </div>
+        <div class="field">
+          <label for="ci-group">Kategori Tamu</label>
+          <select id="ci-group">
+            <option value="Teman">Teman</option>
+            <option value="Keluarga">Keluarga</option>
+            <option value="Rekan Kerja">Rekan Kerja</option>
+            <option value="VIP">VIP</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ci-phone">No. WhatsApp (Opsional)</label>
+          <input id="ci-phone" type="tel" placeholder="08..." />
+        </div>
+        <div class="field">
+          <label for="ci-notes">Ucapan & Doa (Opsional)</label>
+          <input id="ci-notes" type="text" placeholder="Selamat menempuh hidup baru!" />
+        </div>
+        <button type="submit" id="btn-checkin-submit" class="btn btn-primary btn-full">Konfirmasi Hadir</button>
+      </form>
+
+      <div id="checkin-success" class="checkin-success hidden">
+        <h3>Terima Kasih!</h3>
+        <p class="muted">Kehadiran Anda telah tercatat di buku tamu.</p>
+        <button type="button" id="btn-checkin-again" class="btn btn-outline btn-full">Isi untuk Tamu Lain</button>
       </div>
     </div>
   </section>
@@ -250,7 +298,13 @@
               <option value="Tidak Hadir">Tidak Hadir</option>
             </select>
           </div>
-          <button type="button" class="btn btn-primary" data-add="guests">+ Tambah Tamu</button>
+          <div class="btn-row">
+            <button type="button" id="btn-show-qr" class="btn btn-outline">
+              <svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM19 14v3M14 19h7"/></svg>
+              <span>QR Absensi Tamu</span>
+            </button>
+            <button type="button" class="btn btn-primary" data-add="guests">+ Tambah Tamu</button>
+          </div>
         </div>
         <div class="table-wrap card">
           <table>
@@ -421,6 +475,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

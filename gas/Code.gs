@@ -30,6 +30,8 @@ function doPost(e) {
 
     if (action === 'register') return jsonResponse({ ok: true, data: handleRegister_(payload) });
     if (action === 'login') return jsonResponse({ ok: true, data: handleLogin_(payload) });
+    if (action === 'publicEventInfo') return jsonResponse({ ok: true, data: handlePublicEventInfo_(payload) });
+    if (action === 'publicCheckin') return jsonResponse({ ok: true, data: handlePublicCheckin_(payload) });
 
     // Protected routes
     const userId = verifyToken_(body.token);
@@ -293,6 +295,74 @@ function handleDeleteItem_(userId, payload) {
     if (!existing) throw new Error('Data tidak ditemukan.');
     SpreadsheetApp.getActiveSpreadsheet().getSheetByName(mod).deleteRow(existing._rowIndex);
     return { deleted: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// --- Public Guest QR Check-in Handlers ---
+function handlePublicEventInfo_(payload) {
+  const userId = String(payload.user_id || '').trim();
+  if (!userId) throw new Error('ID acara tidak valid.');
+  const users = readRows_('users');
+  const user = users.find((u) => u.id === userId);
+  if (!user) throw new Error('Acara tidak ditemukan.');
+  return {
+    name: user.name,
+    partner_name: user.partner_name,
+    wedding_date: user.wedding_date,
+  };
+}
+
+function handlePublicCheckin_(payload) {
+  const userId = String(payload.user_id || '').trim();
+  const guestName = String(payload.name || '').trim();
+  if (!userId || !guestName) throw new Error('Nama tamu wajib diisi.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const users = readRows_('users');
+    if (!users.some((u) => u.id === userId)) throw new Error('Acara tidak ditemukan.');
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('guests');
+    const headers = SCHEMAS.guests;
+    const rows = readRows_('guests');
+    const existing = rows.find(
+      (r) => r.user_id === userId && String(r.name).trim().toLowerCase() === guestName.toLowerCase()
+    );
+    const now = new Date().toISOString();
+    const pax = Math.max(1, Number(payload.pax || 1));
+
+    if (existing) {
+      const merged = Object.assign({}, stripMeta_(existing), {
+        pax: pax,
+        rsvp: 'Hadir',
+        group: payload.group || existing.group || 'Teman',
+        phone: payload.phone || existing.phone || '',
+        notes: payload.notes ? payload.notes : existing.notes,
+        updated_at: now,
+      });
+      const rowValues = headers.map((h) => merged[h] ?? '');
+      sheet.getRange(existing._rowIndex, 1, 1, headers.length).setValues([rowValues]);
+      return { guest: merged, updated: true };
+    } else {
+      const created = {
+        id: 'gue_' + Utilities.getUuid().slice(0, 8),
+        user_id: userId,
+        name: guestName,
+        side: 'Umum',
+        group: payload.group || 'Teman',
+        pax: pax,
+        rsvp: 'Hadir',
+        phone: String(payload.phone || '').trim(),
+        notes: String(payload.notes || '').trim(),
+        updated_at: now,
+      };
+      const rowValues = headers.map((h) => created[h] ?? '');
+      sheet.appendRow(rowValues);
+      return { guest: created, updated: false };
+    }
   } finally {
     lock.releaseLock();
   }
