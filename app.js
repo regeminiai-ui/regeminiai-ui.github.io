@@ -24,6 +24,7 @@ const state = {
     vendors: [],
     checklists: [],
     rundowns: [],
+    activity_logs: [],
   },
   modalContext: null,
 };
@@ -40,6 +41,7 @@ const MODULE_SCHEMAS = {
       { key: 'paid', label: 'Sudah Dibayar (Rp)', type: 'currency', default: 0 },
       { key: 'status', label: 'Status Pembayaran', type: 'select', options: ['Belum Bayar', 'DP', 'Lunas'], default: 'Belum Bayar' },
       { key: 'notes', label: 'Catatan', type: 'text' },
+      { key: 'receipt_url', label: 'Bukti Kwitansi (Foto / PDF ke Google Drive)', type: 'receipt' },
     ],
   },
   guests: {
@@ -65,6 +67,7 @@ const MODULE_SCHEMAS = {
       { key: 'dp_paid', label: 'DP Terbayar (Rp)', type: 'currency', default: 0 },
       { key: 'status', label: 'Status', type: 'select', options: ['Survey', 'Deal', 'Lunas', 'Batal'], default: 'Survey' },
       { key: 'notes', label: 'Catatan', type: 'text' },
+      { key: 'receipt_url', label: 'Bukti Kwitansi / Invoice (Foto / PDF ke Google Drive)', type: 'receipt' },
     ],
   },
   checklists: {
@@ -276,6 +279,17 @@ function demoApiCall(action, payload) {
       vendors: db.vendors.filter((r) => r.user_id === userId),
       checklists: db.checklists.filter((r) => r.user_id === userId),
       rundowns: db.rundowns.filter((r) => r.user_id === userId),
+      activity_logs: (db.activity_logs || []).filter((r) => r.user_id === userId).slice(-30).reverse(),
+    };
+  }
+
+  if (action === 'uploadReceipt') {
+    const now = new Date().toISOString();
+    const actor = currentUser.email;
+    return {
+      url: '#demo-receipt-' + encodeURIComponent(payload.filename || 'kwitansi.jpg'),
+      uploaded_at: now,
+      uploaded_by: actor,
     };
   }
 
@@ -283,15 +297,36 @@ function demoApiCall(action, payload) {
     const { module, item } = payload;
     const list = db[module];
     if (!list) throw new Error('Modul tidak dikenal');
+    const now = new Date().toISOString();
+    const actor = state.user?.actor_email || currentUser.email;
+    db.activity_logs = db.activity_logs || [];
     if (item.id) {
       const idx = list.findIndex((r) => r.id === item.id && r.user_id === userId);
       if (idx === -1) throw new Error('Data tidak ditemukan');
-      list[idx] = { ...list[idx], ...item, user_id: userId, updated_at: new Date().toISOString() };
+      list[idx] = {
+        ...list[idx],
+        ...item,
+        user_id: userId,
+        created_at: list[idx].created_at || now,
+        created_by: list[idx].created_by || actor,
+        updated_at: now,
+        updated_by: actor,
+      };
+      db.activity_logs.push({ id: uid(), user_id: userId, action: 'UPDATE', module, item_label: item.item || item.name || item.task || item.activity || module, actor_email: actor, created_at: now });
       saveDemoDb(db);
       return { item: list[idx] };
     } else {
-      const created = { ...item, id: uid(), user_id: userId, updated_at: new Date().toISOString() };
+      const created = {
+        ...item,
+        id: uid(),
+        user_id: userId,
+        created_at: now,
+        created_by: actor,
+        updated_at: now,
+        updated_by: actor,
+      };
       list.push(created);
+      db.activity_logs.push({ id: uid(), user_id: userId, action: 'CREATE', module, item_label: item.item || item.name || item.task || item.activity || module, actor_email: actor, created_at: now });
       saveDemoDb(db);
       return { item: created };
     }
@@ -299,7 +334,11 @@ function demoApiCall(action, payload) {
 
   if (action === 'deleteItem') {
     const { module, id } = payload;
+    const target = db[module].find((r) => r.id === id && r.user_id === userId);
     db[module] = db[module].filter((r) => !(r.id === id && r.user_id === userId));
+    db.activity_logs = db.activity_logs || [];
+    const actor = state.user?.actor_email || currentUser.email;
+    db.activity_logs.push({ id: uid(), user_id: userId, action: 'DELETE', module, item_label: target?.item || target?.name || target?.task || target?.activity || id, actor_email: actor, created_at: new Date().toISOString() });
     saveDemoDb(db);
     return { deleted: true };
   }
@@ -433,11 +472,58 @@ async function loadAllData() {
       vendors: res.vendors || [],
       checklists: res.checklists || [],
       rundowns: res.rundowns || [],
+      activity_logs: res.activity_logs || [],
     };
     renderAll();
   } catch (err) {
     showToast(err.message, true);
   }
+}
+
+function formatDateTimeId(val) {
+  if (!val) return '';
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return String(val);
+  return new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d) + ' WIB';
+}
+
+function auditMetaHtml(row) {
+  const parts = [];
+  if (row.created_by || row.created_at) {
+    parts.push(`Simpan: ${escapeHtml(row.created_by || '-')} (${escapeHtml(formatDateTimeId(row.created_at) || '-')})`);
+  }
+  if (row.updated_by || row.updated_at) {
+    parts.push(`Update: ${escapeHtml(row.updated_by || '-')} (${escapeHtml(formatDateTimeId(row.updated_at) || '-')})`);
+  }
+  return parts.length ? `<div class="audit-meta">${parts.join(' • ')}</div>` : '';
+}
+
+function receiptHtml(row) {
+  if (!row.receipt_url) return '';
+  const meta = row.receipt_uploaded_by
+    ? ` (${escapeHtml(row.receipt_uploaded_by)}, ${escapeHtml(formatDateTimeId(row.receipt_uploaded_at))})`
+    : '';
+  return `<div><a class="receipt-link" href="${escapeHtml(row.receipt_url)}" target="_blank" rel="noopener">Lihat Bukti Kwitansi</a><span class="audit-meta">${meta}</span></div>`;
+}
+
+function pushLocalLog(actionName, mod, label) {
+  state.data.activity_logs = [
+    {
+      id: 'local_' + Date.now(),
+      action: actionName,
+      module: mod,
+      item_label: label,
+      actor_email: state.user?.actor_email || state.user?.email || '-',
+      created_at: new Date().toISOString(),
+    },
+    ...(state.data.activity_logs || []),
+  ].slice(0, 30);
 }
 
 // --- Rendering ---
@@ -786,6 +872,25 @@ function renderDashboard() {
   $('dash-rundown').innerHTML = sortedRundown.length
     ? sortedRundown.map((r) => `<li><span>${escapeHtml(formatTimeId(r.start_time))} WIB - ${escapeHtml(r.activity)}</span><span class="muted">${escapeHtml(r.event_name)}</span></li>`).join('')
     : '<li class="muted">Belum ada jadwal rundown.</li>';
+
+  const logs = (state.data.activity_logs || []).slice(0, 10);
+  const actionLabels = {
+    CREATE: 'Simpan',
+    UPDATE: 'Update',
+    DELETE: 'Hapus',
+    UPLOAD_RECEIPT: 'Upload Bukti',
+    RESET_ALL: 'Reset Data',
+  };
+  const logEl = $('dash-activity');
+  if (logEl) {
+    logEl.innerHTML = logs.length
+      ? logs.map((l) => `
+        <li>
+          <span><strong>${escapeHtml(actionLabels[l.action] || l.action)}</strong> • ${escapeHtml(l.item_label)} <small class="muted">(${escapeHtml(l.module)})</small></span>
+          <span class="muted">${escapeHtml(l.actor_email)} • ${escapeHtml(formatDateTimeId(l.created_at))}</span>
+        </li>`).join('')
+      : '<li class="muted">Belum ada riwayat aktivitas.</li>';
+  }
 }
 
 function actionButtons(module, id) {
@@ -811,7 +916,14 @@ function renderBudgets() {
           <input type="checkbox" ${b.status === 'Lunas' ? 'checked' : ''} onchange="toggleBudgetDone('${b.id}', this.checked)" />
         </td>
         <td data-label="Kategori">${escapeHtml(b.category)}</td>
-        <td data-label="Item"><div style="${b.status === 'Lunas' ? 'text-decoration:line-through;color:var(--muted)' : ''}"><strong>${escapeHtml(b.item)}</strong>${b.notes ? `<div class="muted">${escapeHtml(b.notes)}</div>` : ''}</div></td>
+        <td data-label="Item">
+          <div style="${b.status === 'Lunas' ? 'text-decoration:line-through;color:var(--muted)' : ''}">
+            <strong>${escapeHtml(b.item)}</strong>
+            ${b.notes ? `<div class="muted">${escapeHtml(b.notes)}</div>` : ''}
+            ${receiptHtml(b)}
+            ${auditMetaHtml(b)}
+          </div>
+        </td>
         <td data-label="Estimasi">${formatRp(b.estimated)}</td>
         <td data-label="Aktual">${formatRp(b.actual)}</td>
         <td data-label="Terbayar">${formatRp(b.paid)}</td>
@@ -831,7 +943,7 @@ function renderGuests() {
   $('tbody-guests').innerHTML = rows.length
     ? rows.map((g) => `
       <tr>
-        <td data-label="Nama"><div><strong>${escapeHtml(g.name)}</strong>${g.notes ? `<div class="muted">${escapeHtml(g.notes)}</div>` : ''}</div></td>
+        <td data-label="Nama"><div><strong>${escapeHtml(g.name)}</strong>${g.notes ? `<div class="muted">${escapeHtml(g.notes)}</div>` : ''}${auditMetaHtml(g)}</div></td>
         <td data-label="Pihak">${escapeHtml(g.side)}</td>
         <td data-label="Grup">${escapeHtml(g.group)}</td>
         <td data-label="Pax">${escapeHtml(g.pax)}</td>
@@ -853,7 +965,7 @@ function renderVendors() {
     ? rows.map((v) => `
       <tr>
         <td data-label="Kategori">${escapeHtml(v.category)}</td>
-        <td data-label="Vendor"><div><strong>${escapeHtml(v.name)}</strong>${v.notes ? `<div class="muted">${escapeHtml(v.notes)}</div>` : ''}</div></td>
+        <td data-label="Vendor"><div><strong>${escapeHtml(v.name)}</strong>${v.notes ? `<div class="muted">${escapeHtml(v.notes)}</div>` : ''}${receiptHtml(v)}${auditMetaHtml(v)}</div></td>
         <td data-label="PIC">${escapeHtml(v.pic || '-')}</td>
         <td data-label="Kontak">${escapeHtml(v.phone || '-')}</td>
         <td data-label="Harga">${formatRp(v.price)}</td>
@@ -875,7 +987,7 @@ function renderChecklists() {
         return `
           <tr>
             <td data-label="Tahap">${escapeHtml(c.phase)}</td>
-            <td data-label="Tugas" style="${isDone ? 'text-decoration:line-through;color:var(--muted)' : ''}">${escapeHtml(c.task)}</td>
+            <td data-label="Tugas" style="${isDone ? 'text-decoration:line-through;color:var(--muted)' : ''}"><div>${escapeHtml(c.task)}${auditMetaHtml(c)}</div></td>
             <td data-label="PIC">${escapeHtml(c.pic || '-')}</td>
             <td data-label="Target">${escapeHtml(formatDateId(c.due_date) || '-')}</td>
             <td data-label="Status">
@@ -900,7 +1012,7 @@ function renderRundowns() {
       <tr>
         <td data-label="Sesi">${escapeHtml(r.event_name)}</td>
         <td data-label="Waktu">${escapeHtml(formatTimeId(r.start_time))} - ${escapeHtml(formatTimeId(r.end_time))} WIB</td>
-        <td data-label="Kegiatan"><strong>${escapeHtml(r.activity)}</strong></td>
+        <td data-label="Kegiatan"><div><strong>${escapeHtml(r.activity)}</strong>${auditMetaHtml(r)}</div></td>
         <td data-label="PIC">${escapeHtml(r.pic || '-')}</td>
         <td data-label="Lokasi">${escapeHtml(r.location || '-')}</td>
         <td data-label="Catatan">${escapeHtml(r.notes || '-')}</td>
@@ -924,6 +1036,21 @@ function openModal(module, existingItem = null) {
     if (f.type === 'currency') {
       const formatted = formatNumberComma(val);
       return `<div class="field"><label>${escapeHtml(f.label)}</label><input type="text" inputmode="numeric" data-currency="1" name="${f.key}" value="${escapeHtml(formatted)}" ${f.required ? 'required' : ''} /></div>`;
+    }
+    if (f.type === 'receipt') {
+      const currentLink = val
+        ? `<div class="audit-meta">File saat ini: <a class="receipt-link" href="${escapeHtml(val)}" target="_blank" rel="noopener">Lihat Kwitansi</a></div>`
+        : '';
+      return `
+        <div class="field">
+          <label>${escapeHtml(f.label)}</label>
+          <input type="file" accept="image/*,application/pdf" data-receipt-file="1" />
+          <input type="hidden" name="receipt_url" value="${escapeHtml(val)}" />
+          <input type="hidden" name="receipt_uploaded_at" value="${escapeHtml(existingItem?.receipt_uploaded_at || '')}" />
+          <input type="hidden" name="receipt_uploaded_by" value="${escapeHtml(existingItem?.receipt_uploaded_by || '')}" />
+          ${currentLink}
+        </div>
+      `;
     }
     return `<div class="field"><label>${escapeHtml(f.label)}</label><input type="${f.type}" name="${f.key}" value="${escapeHtml(val)}" ${f.min !== undefined ? `min="${f.min}"` : ''} ${f.required ? 'required' : ''} /></div>`;
   }).join('');
@@ -988,8 +1115,10 @@ window.deleteRecord = (module, id) => {
     isDanger: true,
     onConfirm: async () => {
       try {
+        const target = state.data[module].find((r) => r.id === id);
         await apiCall('deleteItem', { module, id });
         state.data[module] = state.data[module].filter((r) => r.id !== id);
+        pushLocalLog('DELETE', module, target?.item || target?.name || target?.task || target?.activity || id);
         renderAll();
         showToast('Data dihapus.');
       } catch (err) {
@@ -1011,6 +1140,7 @@ window.toggleBudgetDone = async (id, checked) => {
     const res = await apiCall('upsertItem', { module: 'budgets', item: updated });
     const idx = state.data.budgets.findIndex((b) => b.id === id);
     state.data.budgets[idx] = res.item;
+    pushLocalLog('UPDATE', 'budgets', res.item.item);
     renderAll();
   } catch (err) {
     showToast(err.message, true);
@@ -1026,6 +1156,7 @@ window.toggleChecklist = async (id, checked) => {
     const res = await apiCall('upsertItem', { module: 'checklists', item: updated });
     const idx = state.data.checklists.findIndex((c) => c.id === id);
     state.data.checklists[idx] = res.item;
+    pushLocalLog('UPDATE', 'checklists', res.item.task);
     renderAll();
   } catch (err) {
     showToast(err.message, true);
@@ -1172,6 +1303,31 @@ document.addEventListener('DOMContentLoaded', () => {
       const saveCrud = async () => {
         await withButtonLock(btn, 'Menyimpan...', async () => {
           try {
+            const fileInput = $('modal-fields').querySelector('input[data-receipt-file="1"]');
+            const file = fileInput?.files?.[0];
+            if (file) {
+              if (file.size > 5 * 1024 * 1024) {
+                throw new Error('Ukuran file bukti maksimal 5 MB.');
+              }
+              btn.textContent = 'Mengupload bukti...';
+              const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+                reader.onerror = () => reject(new Error('Gagal membaca file.'));
+                reader.readAsDataURL(file);
+              });
+              const up = await apiCall('uploadReceipt', {
+                module: ctx.module,
+                filename: file.name,
+                mimeType: file.type || 'image/jpeg',
+                base64,
+              });
+              item.receipt_url = up.url;
+              item.receipt_uploaded_at = up.uploaded_at;
+              item.receipt_uploaded_by = up.uploaded_by;
+              pushLocalLog('UPLOAD_RECEIPT', ctx.module, file.name);
+            }
+
             const res = await apiCall('upsertItem', { module: ctx.module, item });
             const list = state.data[ctx.module];
             if (ctx.id) {
@@ -1180,6 +1336,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               list.push(res.item);
             }
+            pushLocalLog(ctx.id ? 'UPDATE' : 'CREATE', ctx.module, res.item.item || res.item.name || res.item.task || res.item.activity || ctx.module);
             renderAll();
             closeModal();
             showToast('Data tersimpan.');

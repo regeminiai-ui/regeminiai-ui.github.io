@@ -7,11 +7,12 @@
 
 const SCHEMAS = {
   users: ['id', 'email', 'name', 'partner_name', 'wedding_date', 'password_hash', 'salt', 'created_at', 'partner_email'],
-  budgets: ['id', 'user_id', 'category', 'item', 'estimated', 'actual', 'paid', 'status', 'notes', 'updated_at'],
-  guests: ['id', 'user_id', 'name', 'side', 'group', 'pax', 'rsvp', 'phone', 'notes', 'updated_at'],
-  vendors: ['id', 'user_id', 'category', 'name', 'pic', 'phone', 'price', 'dp_paid', 'status', 'notes', 'updated_at'],
-  checklists: ['id', 'user_id', 'phase', 'task', 'pic', 'due_date', 'done', 'updated_at'],
-  rundowns: ['id', 'user_id', 'event_name', 'start_time', 'end_time', 'activity', 'pic', 'location', 'notes', 'updated_at'],
+  budgets: ['id', 'user_id', 'category', 'item', 'estimated', 'actual', 'paid', 'status', 'notes', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'created_at', 'created_by', 'updated_at', 'updated_by'],
+  guests: ['id', 'user_id', 'name', 'side', 'group', 'pax', 'rsvp', 'phone', 'notes', 'created_at', 'created_by', 'updated_at', 'updated_by'],
+  vendors: ['id', 'user_id', 'category', 'name', 'pic', 'phone', 'price', 'dp_paid', 'status', 'notes', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'created_at', 'created_by', 'updated_at', 'updated_by'],
+  checklists: ['id', 'user_id', 'phase', 'task', 'pic', 'due_date', 'done', 'created_at', 'created_by', 'updated_at', 'updated_by'],
+  rundowns: ['id', 'user_id', 'event_name', 'start_time', 'end_time', 'activity', 'pic', 'location', 'notes', 'created_at', 'created_by', 'updated_at', 'updated_by'],
+  activity_logs: ['id', 'user_id', 'action', 'module', 'item_label', 'actor_email', 'created_at'],
 };
 
 const DATA_MODULES = ['budgets', 'guests', 'vendors', 'checklists', 'rundowns'];
@@ -34,16 +35,17 @@ function doPost(e) {
     if (action === 'publicCheckin') return jsonResponse({ ok: true, data: handlePublicCheckin_(payload) });
 
     // Protected routes
-    const userId = verifyToken_(body.token);
-    if (!userId) {
+    const auth = verifyToken_(body.token);
+    if (!auth) {
       return jsonResponse({ ok: false, code: 'UNAUTHORIZED', error: 'Sesi berakhir. Silakan login kembali.' });
     }
 
-    if (action === 'updateProfile') return jsonResponse({ ok: true, data: handleUpdateProfile_(userId, payload) });
-    if (action === 'getAll') return jsonResponse({ ok: true, data: handleGetAll_(userId) });
-    if (action === 'upsertItem') return jsonResponse({ ok: true, data: handleUpsertItem_(userId, payload) });
-    if (action === 'deleteItem') return jsonResponse({ ok: true, data: handleDeleteItem_(userId, payload) });
-    if (action === 'resetUserData') return jsonResponse({ ok: true, data: handleResetUserData_(userId) });
+    if (action === 'updateProfile') return jsonResponse({ ok: true, data: handleUpdateProfile_(auth.userId, payload) });
+    if (action === 'getAll') return jsonResponse({ ok: true, data: handleGetAll_(auth.userId) });
+    if (action === 'upsertItem') return jsonResponse({ ok: true, data: handleUpsertItem_(auth, payload) });
+    if (action === 'deleteItem') return jsonResponse({ ok: true, data: handleDeleteItem_(auth, payload) });
+    if (action === 'uploadReceipt') return jsonResponse({ ok: true, data: handleUploadReceipt_(auth, payload) });
+    if (action === 'resetUserData') return jsonResponse({ ok: true, data: handleResetUserData_(auth) });
 
     return jsonResponse({ ok: false, error: 'Action tidak dikenal: ' + action });
   } catch (err) {
@@ -97,9 +99,10 @@ function sha256Hex_(input) {
   return bytes.map((b) => ('0' + ((b + 256) % 256).toString(16)).slice(-2)).join('');
 }
 
-function signToken_(userId) {
+function signToken_(userId, actorEmail) {
   const exp = Date.now() + 1000 * 60 * 60 * 24 * 14; // 14 days
-  const data = userId + '.' + exp;
+  const actor = actorEmail || '';
+  const data = userId + '|' + actor + '.' + exp;
   const sigBytes = Utilities.computeHmacSha256Signature(data, getSecret_());
   const sig = Utilities.base64EncodeWebSafe(sigBytes);
   return Utilities.base64EncodeWebSafe(data) + '.' + sig;
@@ -112,9 +115,19 @@ function verifyToken_(token) {
   const data = Utilities.newBlob(Utilities.base64DecodeWebSafe(parts[0])).getDataAsString();
   const expectedSig = Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(data, getSecret_()));
   if (parts[1] !== expectedSig) return null;
-  const [userId, expStr] = data.split('.');
-  if (!userId || Date.now() > Number(expStr)) return null;
-  return userId;
+  const dotIdx = data.lastIndexOf('.');
+  if (dotIdx === -1) return null;
+  const subject = data.slice(0, dotIdx);
+  const expStr = data.slice(dotIdx + 1);
+  if (!subject || Date.now() > Number(expStr)) return null;
+  const pipeIdx = subject.indexOf('|');
+  if (pipeIdx === -1) {
+    return { userId: subject, actorEmail: '' };
+  }
+  return {
+    userId: subject.slice(0, pipeIdx),
+    actorEmail: subject.slice(pipeIdx + 1),
+  };
 }
 
 // --- Sheet Helpers ---
@@ -187,11 +200,12 @@ function handleRegister_(payload) {
 
     SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users').appendRow(row);
     return {
-      token: signToken_(id),
+      token: signToken_(id, email),
       user: {
         id,
         email,
         partner_email: partnerEmail,
+        actor_email: email,
         name: row[2],
         partner_name: row[3],
         wedding_date: row[4],
@@ -216,11 +230,12 @@ function handleLogin_(payload) {
   if (hash !== user.password_hash) throw new Error('Email atau password salah.');
 
   return {
-    token: signToken_(user.id),
+    token: signToken_(user.id, email),
     user: {
       id: user.id,
       email: user.email,
       partner_email: user.partner_email || '',
+      actor_email: email,
       name: user.name,
       partner_name: user.partner_name,
       wedding_date: user.wedding_date,
@@ -269,6 +284,24 @@ function handleUpdateProfile_(userId, payload) {
   }
 }
 
+function logActivity_(userId, actionName, mod, itemLabel, actorEmail, now) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('activity_logs');
+  if (!sheet) return;
+  sheet.appendRow([
+    'log_' + Utilities.getUuid().slice(0, 8),
+    userId,
+    actionName,
+    mod,
+    String(itemLabel || '-'),
+    String(actorEmail || '-'),
+    now || new Date().toISOString(),
+  ]);
+}
+
+function getItemLabel_(mod, item) {
+  return item.item || item.name || item.task || item.activity || item.id || mod;
+}
+
 // --- CRUD Handlers ---
 function handleGetAll_(userId) {
   const result = {};
@@ -277,10 +310,17 @@ function handleGetAll_(userId) {
       .filter((r) => r.user_id === userId)
       .map(stripMeta_);
   });
+  result.activity_logs = readRows_('activity_logs')
+    .filter((r) => r.user_id === userId)
+    .map(stripMeta_)
+    .slice(-30)
+    .reverse();
   return result;
 }
 
-function handleUpsertItem_(userId, payload) {
+function handleUpsertItem_(auth, payload) {
+  const userId = auth.userId;
+  const actor = auth.actorEmail || userId;
   const mod = payload.module;
   if (DATA_MODULES.indexOf(mod) === -1) throw new Error('Modul tidak valid.');
   const item = payload.item || {};
@@ -300,19 +340,27 @@ function handleUpsertItem_(userId, payload) {
       const merged = Object.assign({}, stripMeta_(existing), item, {
         id: existing.id,
         user_id: userId,
+        created_at: existing.created_at || existing.updated_at || now,
+        created_by: existing.created_by || actor,
         updated_at: now,
+        updated_by: actor,
       });
       const rowValues = headers.map((h) => merged[h] ?? '');
       sheet.getRange(existing._rowIndex, 1, 1, headers.length).setValues([rowValues]);
+      logActivity_(userId, 'UPDATE', mod, getItemLabel_(mod, merged), actor, now);
       return { item: merged };
     } else {
       const created = Object.assign({}, item, {
         id: mod.slice(0, 3) + '_' + Utilities.getUuid().slice(0, 8),
         user_id: userId,
+        created_at: now,
+        created_by: actor,
         updated_at: now,
+        updated_by: actor,
       });
       const rowValues = headers.map((h) => created[h] ?? '');
       sheet.appendRow(rowValues);
+      logActivity_(userId, 'CREATE', mod, getItemLabel_(mod, created), actor, now);
       return { item: created };
     }
   } finally {
@@ -320,7 +368,9 @@ function handleUpsertItem_(userId, payload) {
   }
 }
 
-function handleDeleteItem_(userId, payload) {
+function handleDeleteItem_(auth, payload) {
+  const userId = auth.userId;
+  const actor = auth.actorEmail || userId;
   const mod = payload.module;
   const id = payload.id;
   if (DATA_MODULES.indexOf(mod) === -1) throw new Error('Modul tidak valid.');
@@ -331,14 +381,47 @@ function handleDeleteItem_(userId, payload) {
     const rows = readRows_(mod);
     const existing = rows.find((r) => r.id === id && r.user_id === userId);
     if (!existing) throw new Error('Data tidak ditemukan.');
+    const label = getItemLabel_(mod, existing);
     SpreadsheetApp.getActiveSpreadsheet().getSheetByName(mod).deleteRow(existing._rowIndex);
+    logActivity_(userId, 'DELETE', mod, label, actor, new Date().toISOString());
     return { deleted: true };
   } finally {
     lock.releaseLock();
   }
 }
 
-function handleResetUserData_(userId) {
+function handleUploadReceipt_(auth, payload) {
+  const userId = auth.userId;
+  const actor = auth.actorEmail || userId;
+  const base64 = String(payload.base64 || '');
+  const mimeType = String(payload.mimeType || 'image/jpeg');
+  const filename = String(payload.filename || ('kwitansi_' + Date.now() + '.jpg'));
+  if (!base64) throw new Error('File bukti tidak boleh kosong.');
+
+  const rootName = 'My Weeding Plan - Bukti Kwitansi';
+  const rootFolders = DriveApp.getFoldersByName(rootName);
+  const rootFolder = rootFolders.hasNext() ? rootFolders.next() : DriveApp.createFolder(rootName);
+
+  const userFolders = rootFolder.getFoldersByName(userId);
+  const userFolder = userFolders.hasNext() ? userFolders.next() : rootFolder.createFolder(userId);
+
+  const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, filename);
+  const file = userFolder.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Access.VIEW);
+
+  const now = new Date().toISOString();
+  logActivity_(userId, 'UPLOAD_RECEIPT', payload.module || 'budgets', filename, actor, now);
+
+  return {
+    url: file.getUrl(),
+    uploaded_at: now,
+    uploaded_by: actor,
+  };
+}
+
+function handleResetUserData_(auth) {
+  const userId = auth.userId;
+  const actor = auth.actorEmail || userId;
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
@@ -353,6 +436,7 @@ function handleResetUserData_(userId) {
         totalDeleted += 1;
       }
     });
+    logActivity_(userId, 'RESET_ALL', 'all', 'Reset semua data akun', actor, new Date().toISOString());
     return { deleted: totalDeleted };
   } finally {
     lock.releaseLock();

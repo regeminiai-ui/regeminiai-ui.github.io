@@ -741,6 +741,27 @@ input[type="checkbox"] {
   margin-top: 20px;
 }
 
+.activity-card {
+  margin-top: 20px;
+}
+
+.audit-meta {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.receipt-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: underline;
+  margin-top: 4px;
+}
+
 .modal-card {
   width: 100%;
   max-width: 480px;
