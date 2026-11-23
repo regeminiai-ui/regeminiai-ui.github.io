@@ -2373,6 +2373,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   $('btn-theme-toggle').addEventListener('click', toggleTheme);
   $('btn-style-toggle')?.addEventListener('click', toggleUiStyle);
+  $('btn-admin-theme-toggle')?.addEventListener('click', toggleTheme);
+  $('btn-admin-style-toggle')?.addEventListener('click', toggleUiStyle);
 
   if (!DEFAULT_API_URL) {
     document.body.innerHTML = `
@@ -2464,6 +2466,7 @@ function openAdminView() {
   $('checkin-view').classList.add('hidden');
   $('guest-scanner-view').classList.add('hidden');
   $('admin-view').classList.remove('hidden');
+  applyUiStyle(localStorage.getItem('nikahplan_ui_style') || 'default');
 
   const savedKey = getValidAdminSession();
   if (savedKey) {
@@ -2892,8 +2895,9 @@ async function initGuestScannerView(userId, guestId) {
 function applyTheme(theme) {
   const isDark = theme === 'dark';
   document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-  const lbl = $('theme-toggle-label');
-  if (lbl) lbl.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
+  const text = isDark ? 'Mode Terang' : 'Mode Gelap';
+  if ($('theme-toggle-label')) $('theme-toggle-label').textContent = text;
+  if ($('admin-theme-toggle-label')) $('admin-theme-toggle-label').textContent = text;
 }
 
 function initTheme() {
@@ -2911,8 +2915,9 @@ function toggleTheme() {
 function applyUiStyle(style) {
   const isNeu = style === 'neumorphism' || style === 'glass';
   document.documentElement.setAttribute('data-ui-style', isNeu ? 'neumorphism' : 'default');
-  const lbl = $('style-toggle-label');
-  if (lbl) lbl.textContent = isNeu ? 'Tema: Neumorphism' : 'Tema: Default';
+  const text = isNeu ? 'Tema: Neumorphism' : 'Tema: Default';
+  if ($('style-toggle-label')) $('style-toggle-label').textContent = text;
+  if ($('admin-style-toggle-label')) $('admin-style-toggle-label').textContent = text;
 }
 
 function toggleUiStyle() {
