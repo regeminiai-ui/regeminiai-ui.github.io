@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
-  <link rel="stylesheet" href="styles.css?v=26" />
+  <link rel="stylesheet" href="styles.css?v=27" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -81,6 +81,74 @@
         <button type="button" id="btn-open-api-config" class="link-btn">Konfigurasi URL Google Apps Script</button>
         <span class="muted"> • </span>
         <button type="button" id="btn-open-admin" class="link-btn">Panel Admin</button>
+      </div>
+    </div>
+
+    <!-- PRICING & CARA PEMBELIAN (Hanya tampil saat tab Daftar Akun) -->
+    <div id="pricing-showcase" class="pricing-showcase hidden">
+      <div class="card" style="margin-bottom:16px">
+        <h3>Cara Pembelian & Aktivasi</h3>
+        <ol class="howto-list">
+          <li>Pilih paket di bawah lalu klik tombol <strong>Beli via WhatsApp</strong> ke Admin <strong>Ahmad Husain (0895-0990-1360)</strong>.</li>
+          <li>Lakukan pembayaran sesuai paket yang dipilih (Transfer / QRIS).</li>
+          <li>Admin akan mengirimkan <strong>1 Kode Lisensi</strong> unik ke WhatsApp Anda.</li>
+          <li>Masukkan Kode Lisensi tersebut pada form <strong>Daftar Akun</strong> di atas lalu klik <strong>Buat Akun</strong>.</li>
+        </ol>
+      </div>
+
+      <div class="pricing-grid">
+        <article class="card pricing-card">
+          <div class="plan-card-head">
+            <h3>Sederhana</h3>
+            <span class="badge badge-neutral">6 Bulan</span>
+          </div>
+          <div class="price-tag">Rp 25,000</div>
+          <ul class="plan-preview-list">
+            <li><span>1 Email Login</span><strong>✓</strong></li>
+            <li><span>Rekomendasi Plan KUA &amp; Sederhana</span><strong>✓</strong></li>
+            <li><span>Anggaran, Tamu (maks 100), Checklist</span><strong>✓</strong></li>
+            <li><span>Backup JSON</span><strong>✓</strong></li>
+          </ul>
+          <div class="plan-card-footer">
+            <a class="btn btn-outline btn-full" target="_blank" rel="noopener" href="https://wa.me/6289509901360?text=Halo%20Admin%20Ahmad%20Husain%2C%20saya%20mau%20beli%20Paket%20Sederhana%20(Rp%2025.000)%20My%20Weeding%20Plan">Beli via WhatsApp</a>
+          </div>
+        </article>
+
+        <article class="card pricing-card featured">
+          <div class="plan-card-head">
+            <h3>Medium</h3>
+            <span class="badge badge-warn">6 Bulan</span>
+          </div>
+          <div class="price-tag">Rp 35,000</div>
+          <ul class="plan-preview-list">
+            <li><span>Kolaborasi 2 Email Pasangan</span><strong>✓</strong></li>
+            <li><span>Semua 8 Plan (incl. Adat Jawa/Sunda/dll)</span><strong>✓</strong></li>
+            <li><span>Vendor, Rundown &amp; Fitur Cicilan</span><strong>✓</strong></li>
+            <li><span>Upload Bukti Drive + Menu Asset</span><strong>✓</strong></li>
+            <li><span>QR Buku Tamu Umum &amp; Mode Gelap</span><strong>✓</strong></li>
+          </ul>
+          <div class="plan-card-footer">
+            <a class="btn btn-primary btn-full" target="_blank" rel="noopener" href="https://wa.me/6289509901360?text=Halo%20Admin%20Ahmad%20Husain%2C%20saya%20mau%20beli%20Paket%20Medium%20(Rp%2035.000)%20My%20Weeding%20Plan">Beli via WhatsApp</a>
+          </div>
+        </article>
+
+        <article class="card pricing-card">
+          <div class="plan-card-head">
+            <h3>Rich</h3>
+            <span class="badge badge-ok">12 + 1 Bln Bonus</span>
+          </div>
+          <div class="price-tag">Rp 50,000</div>
+          <ul class="plan-preview-list">
+            <li><span>Semua Fitur Paket Medium</span><strong>✓</strong></li>
+            <li><span>Link Scan QR Pribadi per Tamu</span><strong>✓</strong></li>
+            <li><span>Custom Folder Google Drive Sendiri</span><strong>✓</strong></li>
+            <li><span>Riwayat Aktivitas (Audit Trail)</span><strong>✓</strong></li>
+            <li><span>Bebas Watermark di Halaman Tamu</span><strong>✓</strong></li>
+          </ul>
+          <div class="plan-card-footer">
+            <a class="btn btn-primary btn-full" target="_blank" rel="noopener" href="https://wa.me/6289509901360?text=Halo%20Admin%20Ahmad%20Husain%2C%20saya%20mau%20beli%20Paket%20Rich%20(Rp%2050.000)%20My%20Weeding%20Plan">Beli via WhatsApp</a>
+          </div>
+        </article>
       </div>
     </div>
   </section>
@@ -360,12 +428,11 @@
       </nav>
 
       <div class="sidebar-footer">
-        <div id="plan-badge" class="badge badge-ok">Paket Rich</div>
         <button type="button" id="btn-theme-toggle" class="btn btn-outline btn-full">
           <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
           <span id="theme-toggle-label">Mode Gelap</span>
         </button>
-        <div id="connection-badge" class="badge badge-neutral">Mode Demo</div>
+        <div id="plan-badge" class="badge badge-ok">Paket Rich</div>
         <button type="button" id="btn-logout" class="btn btn-ghost btn-full">
           <svg class="svg-icon" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M15 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/></svg>
           <span>Keluar</span>
@@ -763,6 +830,6 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="app.js?v=26"></script>
+  <script src="app.js?v=27"></script>
 </body>
 </html>

@@ -496,16 +496,11 @@ function logout(notify = true) {
 
 function updateModeBanner() {
   const banner = $('mode-banner');
-  const badge = $('connection-badge');
   if (isDemoMode()) {
     banner.textContent = 'Mode Demo Aktif (data tersimpan di browser ini). Atur URL Google Apps Script untuk sinkron ke Google Sheets.';
     banner.classList.remove('hidden');
-    badge.textContent = 'Mode Demo (Lokal)';
-    badge.className = 'badge badge-warn';
   } else {
     banner.classList.add('hidden');
-    badge.textContent = 'Google Sheets Aktif';
-    badge.className = 'badge badge-ok';
   }
 }
 
@@ -598,10 +593,10 @@ function applyTierUi() {
   const label = tierLabels[caps.tier] || 'Paket Rich';
 
   const exp = state.user.expires_at;
-  let daysLeftText = 'Aktif';
+  let daysLeftText = 'Aktif Selamanya';
   if (exp) {
     const diff = Math.ceil((new Date(exp).getTime() - Date.now()) / 86400000);
-    daysLeftText = diff > 0 ? `Sisa ${diff} hari (${formatDateId(exp)})` : `Expired (${formatDateId(exp)})`;
+    daysLeftText = diff > 0 ? `Sisa ${diff} hari` : 'Masa Aktif Habis';
   }
 
   const badge = $('plan-badge');
@@ -611,7 +606,7 @@ function applyTierUi() {
   }
   const infoEl = $('settings-plan-info');
   if (infoEl) {
-    infoEl.textContent = `Paket saat ini: ${label} • ${daysLeftText}.`;
+    infoEl.textContent = `Paket saat ini: ${label} • ${daysLeftText}${exp ? ` (s/d ${formatDateId(exp)})` : ''}.`;
   }
   const expBanner = $('expired-banner');
   if (expBanner) expBanner.classList.toggle('hidden', !expired);
@@ -1592,6 +1587,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.auth-tab').forEach((b) => b.classList.toggle('active', b === btn));
       $('login-form').classList.toggle('hidden', target !== 'login');
       $('register-form').classList.toggle('hidden', target !== 'register');
+      $('pricing-showcase')?.classList.toggle('hidden', target !== 'register');
     });
   });
 
