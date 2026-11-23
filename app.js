@@ -822,7 +822,7 @@ function renderPricingShowcase(pricingData) {
         'Masa Aktif 15 + 3 Bulan Bonus',
         'Semua Fitur Rich',
         'AI Wedding Plan Generator (Rekomendasi Otomatis)',
-        'Simpan Banyak Konsep AI di Browser (Lokal)',
+        'Simpan & Kelola Banyak Konsep Pernikahan',
         'Terapkan Plan AI Langsung ke Budget & Checklist',
       ],
     },
@@ -2859,7 +2859,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const plan = window.NikahAiPlanner.generatePlanFromPrompt(prompt);
       window.NikahAiPlanner.savePlan(state.user?.id, plan);
       renderAiPlans();
-      showToast('Plan AI berhasil dibuat & disimpan di browser Anda!');
+      showToast('Rencana AI berhasil dibuat & disimpan!');
     });
   });
 
