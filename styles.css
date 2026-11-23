@@ -316,8 +316,8 @@ input:focus, select:focus, textarea:focus {
 
 .main-content {
   padding: 28px 32px;
-  max-width: 1200px;
   width: 100%;
+  min-width: 0;
 }
 
 .topbar {
@@ -427,9 +427,16 @@ input:focus, select:focus, textarea:focus {
 .plan-preview-list li {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  align-items: baseline;
+  gap: 12px;
   padding-bottom: 5px;
   border-bottom: 1px dashed var(--border);
+}
+
+.plan-preview-list li strong,
+.plan-preview-list li .muted {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .plan-preview-list li:last-child {

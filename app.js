@@ -293,23 +293,36 @@ function renderAuthOrApp() {
   }
 }
 
+function normalizeDateStr(val) {
+  if (!val) return '';
+  const s = String(val);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s.slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function renderUserHeader() {
   const u = state.user;
+  const dateStr = normalizeDateStr(u.wedding_date);
   $('sidebar-couple').textContent = `${u.name} & ${u.partner_name}`;
   $('set-name').value = u.name || '';
   $('set-partner').value = u.partner_name || '';
-  $('set-date').value = u.wedding_date || '';
+  $('set-date').value = dateStr;
   $('set-api-url').value = state.apiUrl || '';
 
   const cd = $('wedding-countdown');
-  if (u.wedding_date) {
-    const target = new Date(u.wedding_date + 'T00:00:00');
+  if (dateStr) {
+    const target = new Date(dateStr + 'T00:00:00');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-    if (diffDays > 0) cd.textContent = `H-${diffDays} menuju hari bahagia (${u.wedding_date})`;
+    if (diffDays > 0) cd.textContent = `H-${diffDays} menuju hari bahagia (${dateStr})`;
     else if (diffDays === 0) cd.textContent = 'Hari ini adalah Hari Pernikahan Anda!';
-    else cd.textContent = `Tanggal pernikahan: ${u.wedding_date}`;
+    else cd.textContent = `Tanggal pernikahan: ${dateStr}`;
   } else {
     cd.textContent = 'Atur tanggal pernikahan di Pengaturan';
   }
