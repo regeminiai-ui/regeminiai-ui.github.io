@@ -6,7 +6,8 @@
  */
 
 const SCHEMAS = {
-  users: ['id', 'email', 'name', 'partner_name', 'wedding_date', 'password_hash', 'salt', 'created_at', 'partner_email', 'drive_folder_id'],
+  users: ['id', 'email', 'name', 'partner_name', 'wedding_date', 'password_hash', 'salt', 'created_at', 'partner_email', 'drive_folder_id', 'tier', 'status', 'expires_at', 'license_code'],
+  licenses: ['code', 'tier', 'duration_days', 'status', 'used_by_email', 'used_at', 'created_at'],
   budgets: ['id', 'user_id', 'category', 'item', 'estimated', 'actual', 'paid', 'status', 'notes', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'installments_json', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   guests: ['id', 'user_id', 'name', 'side', 'group', 'pax', 'rsvp', 'phone', 'notes', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   vendors: ['id', 'user_id', 'category', 'name', 'pic', 'phone', 'price', 'dp_paid', 'status', 'notes', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'installments_json', 'created_at', 'created_by', 'updated_at', 'updated_by'],
@@ -27,6 +28,30 @@ function authorizeDrive() {
   const f = DriveApp.getRootFolder().createFile('_nikahplan_auth_test.txt', 'ok');
   f.setTrashed(true);
   Logger.log('Drive write authorized');
+}
+
+// --- Admin License Generators (Jalankan dari Editor Apps Script) ---
+function generateSederhanaCodes() { return generateLicenses_('sederhana', 10); }
+function generateMediumCodes() { return generateLicenses_('medium', 10); }
+function generateRichCodes() { return generateLicenses_('rich', 10); }
+
+function generateLicenses_(tier, count) {
+  ensureSchema_();
+  const durations = { sederhana: 180, medium: 180, rich: 395 };
+  const prefixes = { sederhana: 'SED', medium: 'MED', rich: 'RCH' };
+  const days = durations[tier] || 180;
+  const prefix = prefixes[tier] || 'GEN';
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('licenses');
+  const now = new Date().toISOString();
+  const codes = [];
+  for (let i = 0; i < (count || 10); i++) {
+    const rand = Utilities.getUuid().replace(/-/g, '').slice(0, 6).toUpperCase();
+    const code = 'MWP-' + prefix + '-' + rand;
+    sheet.appendRow([code, tier, days, 'unused', '', '', now]);
+    codes.push(code);
+  }
+  Logger.log('Generated ' + codes.length + ' ' + tier + ' codes: ' + codes.join(', '));
+  return codes;
 }
 
 function doPost(e) {
@@ -50,6 +75,7 @@ function doPost(e) {
     }
 
     if (action === 'updateProfile') return jsonResponse({ ok: true, data: handleUpdateProfile_(auth.userId, payload) });
+    if (action === 'redeemLicense') return jsonResponse({ ok: true, data: handleRedeemLicense_(auth.userId, payload) });
     if (action === 'getAll') return jsonResponse({ ok: true, data: handleGetAll_(auth.userId) });
     if (action === 'upsertItem') return jsonResponse({ ok: true, data: handleUpsertItem_(auth, payload) });
     if (action === 'deleteItem') return jsonResponse({ ok: true, data: handleDeleteItem_(auth, payload) });
@@ -170,13 +196,39 @@ function isEmailTaken_(users, email, excludeUserId) {
   });
 }
 
+const TIER_RANK = { sederhana: 1, medium: 2, rich: 3 };
+
+function getUserPlanContext_(userId) {
+  const users = readRows_('users');
+  const user = users.find((u) => u.id === userId);
+  if (!user) throw new Error('User tidak ditemukan.');
+  const status = String(user.status || 'active').toLowerCase();
+  if (status === 'suspended' || status === 'blocked') {
+    throw new Error('Akun Anda dinonaktifkan. Silakan hubungi Admin.');
+  }
+  const tier = String(user.tier || 'rich').toLowerCase();
+  const expiresAt = user.expires_at ? String(user.expires_at) : '';
+  const isExpired = Boolean(expiresAt && Date.now() > new Date(expiresAt).getTime());
+  return { user, tier, expiresAt, isExpired };
+}
+
+function assertWritablePlan_(ctx) {
+  if (ctx.isExpired) {
+    throw new Error('Masa aktif paket Anda telah berakhir. Perpanjang dengan Kode Lisensi di menu Pengaturan.');
+  }
+}
+
 // --- Auth Handlers ---
 function handleRegister_(payload) {
   const email = String(payload.email || '').trim().toLowerCase();
   const partnerEmail = String(payload.partner_email || '').trim().toLowerCase();
   const password = String(payload.password || '');
+  const licenseCode = String(payload.license_code || '').trim().toUpperCase();
   if (!email || password.length < 6) {
     throw new Error('Email valid dan password minimal 6 karakter wajib diisi.');
+  }
+  if (!licenseCode) {
+    throw new Error('Kode Lisensi wajib diisi untuk mendaftar.');
   }
   if (partnerEmail && partnerEmail === email) {
     throw new Error('Email pasangan harus berbeda dengan email utama.');
@@ -190,34 +242,67 @@ function handleRegister_(payload) {
       throw new Error('Salah satu email sudah terdaftar.');
     }
 
+    const licenses = readRows_('licenses');
+    const lic = licenses.find((l) => String(l.code || '').trim().toUpperCase() === licenseCode);
+    if (!lic || String(lic.status || '').toLowerCase() !== 'unused') {
+      throw new Error('Kode Lisensi tidak valid atau sudah digunakan.');
+    }
+
+    const tier = String(lic.tier || 'sederhana').toLowerCase();
+    const durationDays = Number(lic.duration_days || 180);
+    const finalPartnerEmail = tier === 'sederhana' ? '' : partnerEmail;
+
     const id = 'u_' + Utilities.getUuid().slice(0, 8);
     const salt = Utilities.getUuid().slice(0, 12);
     const hash = sha256Hex_(salt + ':' + password);
     const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString();
 
-    const row = [
+    const userObj = {
       id,
       email,
-      String(payload.name || '').trim(),
-      String(payload.partner_name || '').trim(),
-      String(payload.wedding_date || ''),
-      hash,
+      name: String(payload.name || '').trim(),
+      partner_name: String(payload.partner_name || '').trim(),
+      wedding_date: String(payload.wedding_date || ''),
+      password_hash: hash,
       salt,
-      now,
-      partnerEmail,
-    ];
+      created_at: now,
+      partner_email: finalPartnerEmail,
+      drive_folder_id: '',
+      tier,
+      status: 'active',
+      expires_at: expiresAt,
+      license_code: lic.code,
+    };
 
-    SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users').appendRow(row);
+    const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
+    const userHeaders = userSheet.getRange(1, 1, 1, userSheet.getLastColumn()).getValues()[0];
+    userSheet.appendRow(userHeaders.map((h) => userObj[h] ?? ''));
+
+    // Mark license as used
+    const licSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('licenses');
+    const licHeaders = licSheet.getRange(1, 1, 1, licSheet.getLastColumn()).getValues()[0];
+    const updatedLic = Object.assign({}, stripMeta_(lic), {
+      status: 'used',
+      used_by_email: email,
+      used_at: now,
+    });
+    licSheet.getRange(lic._rowIndex, 1, 1, licHeaders.length).setValues([licHeaders.map((h) => updatedLic[h] ?? '')]);
+
     return {
       token: signToken_(id, email),
       user: {
         id,
         email,
-        partner_email: partnerEmail,
+        partner_email: finalPartnerEmail,
+        drive_folder_id: '',
+        tier,
+        status: 'active',
+        expires_at: expiresAt,
         actor_email: email,
-        name: row[2],
-        partner_name: row[3],
-        wedding_date: row[4],
+        name: userObj.name,
+        partner_name: userObj.partner_name,
+        wedding_date: userObj.wedding_date,
       },
     };
   } finally {
@@ -238,6 +323,12 @@ function handleLogin_(payload) {
   const hash = sha256Hex_(user.salt + ':' + password);
   if (hash !== user.password_hash) throw new Error('Email atau password salah.');
 
+  const status = String(user.status || 'active').toLowerCase();
+  if (status === 'suspended' || status === 'blocked') {
+    throw new Error('Akun Anda dinonaktifkan. Silakan hubungi Admin.');
+  }
+
+  const tier = String(user.tier || 'rich').toLowerCase();
   return {
     token: signToken_(user.id, email),
     user: {
@@ -245,12 +336,75 @@ function handleLogin_(payload) {
       email: user.email,
       partner_email: user.partner_email || '',
       drive_folder_id: user.drive_folder_id || '',
+      tier,
+      status,
+      expires_at: user.expires_at || '',
       actor_email: email,
       name: user.name,
       partner_name: user.partner_name,
       wedding_date: user.wedding_date,
     },
   };
+}
+
+function handleRedeemLicense_(userId, payload) {
+  const licenseCode = String(payload.license_code || '').trim().toUpperCase();
+  if (!licenseCode) throw new Error('Masukkan Kode Lisensi.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const users = readRows_('users');
+    const user = users.find((u) => u.id === userId);
+    if (!user) throw new Error('User tidak ditemukan.');
+
+    const licenses = readRows_('licenses');
+    const lic = licenses.find((l) => String(l.code || '').trim().toUpperCase() === licenseCode);
+    if (!lic || String(lic.status || '').toLowerCase() !== 'unused') {
+      throw new Error('Kode Lisensi tidak valid atau sudah digunakan.');
+    }
+
+    const now = new Date().toISOString();
+    const curTier = String(user.tier || 'sederhana').toLowerCase();
+    const newTier = String(lic.tier || 'sederhana').toLowerCase();
+    const finalTier = (TIER_RANK[newTier] || 1) >= (TIER_RANK[curTier] || 1) ? newTier : curTier;
+    const baseTime = user.expires_at ? Math.max(Date.now(), new Date(user.expires_at).getTime()) : Date.now();
+    const newExpiresAt = new Date(baseTime + Number(lic.duration_days || 180) * 86400000).toISOString();
+
+    const userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
+    const userHeaders = userSheet.getRange(1, 1, 1, userSheet.getLastColumn()).getValues()[0];
+    user.tier = finalTier;
+    user.status = 'active';
+    user.expires_at = newExpiresAt;
+    user.license_code = lic.code;
+    userSheet.getRange(user._rowIndex, 1, 1, userHeaders.length).setValues([userHeaders.map((h) => user[h] ?? '')]);
+
+    const licSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('licenses');
+    const licHeaders = licSheet.getRange(1, 1, 1, licSheet.getLastColumn()).getValues()[0];
+    const updatedLic = Object.assign({}, stripMeta_(lic), {
+      status: 'used',
+      used_by_email: user.email,
+      used_at: now,
+    });
+    licSheet.getRange(lic._rowIndex, 1, 1, licHeaders.length).setValues([licHeaders.map((h) => updatedLic[h] ?? '')]);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        partner_email: user.partner_email || '',
+        drive_folder_id: user.drive_folder_id || '',
+        tier: finalTier,
+        status: 'active',
+        expires_at: newExpiresAt,
+        name: user.name,
+        partner_name: user.partner_name,
+        wedding_date: user.wedding_date,
+      },
+    };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function extractDriveFolderId_(input) {
@@ -264,11 +418,12 @@ function handleUpdateProfile_(userId, payload) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
+    const ctx = getUserPlanContext_(userId);
+    assertWritablePlan_(ctx);
     const users = readRows_('users');
-    const user = users.find((u) => u.id === userId);
-    if (!user) throw new Error('User tidak ditemukan.');
+    const user = ctx.user;
 
-    const partnerEmail = String(payload.partner_email || '').trim().toLowerCase();
+    const partnerEmail = ctx.tier === 'sederhana' ? '' : String(payload.partner_email || '').trim().toLowerCase();
     if (partnerEmail && partnerEmail === String(user.email || '').toLowerCase()) {
       throw new Error('Email pasangan harus berbeda dengan email utama.');
     }
@@ -282,7 +437,7 @@ function handleUpdateProfile_(userId, payload) {
     user.partner_name = String(payload.partner_name || '').trim();
     user.wedding_date = String(payload.wedding_date || '');
     user.partner_email = partnerEmail;
-    user.drive_folder_id = extractDriveFolderId_(payload.drive_folder_id);
+    user.drive_folder_id = ctx.tier === 'rich' ? extractDriveFolderId_(payload.drive_folder_id) : (user.drive_folder_id || '');
 
     const rowValues = headers.map((h) => user[h] ?? '');
     sheet.getRange(user._rowIndex, 1, 1, headers.length).setValues([rowValues]);
@@ -292,7 +447,10 @@ function handleUpdateProfile_(userId, payload) {
         id: user.id,
         email: user.email,
         partner_email: user.partner_email,
-        drive_folder_id: user.drive_folder_id,
+        drive_folder_id: user.drive_folder_id || '',
+        tier: ctx.tier,
+        status: String(user.status || 'active'),
+        expires_at: ctx.expiresAt,
         name: user.name,
         partner_name: user.partner_name,
         wedding_date: user.wedding_date,
@@ -323,17 +481,22 @@ function getItemLabel_(mod, item) {
 
 // --- CRUD Handlers ---
 function handleGetAll_(userId) {
+  const ctx = getUserPlanContext_(userId);
   const result = {};
   DATA_MODULES.forEach((mod) => {
     result[mod] = readRows_(mod)
       .filter((r) => r.user_id === userId)
       .map(stripMeta_);
   });
-  result.activity_logs = readRows_('activity_logs')
-    .filter((r) => r.user_id === userId)
-    .map(stripMeta_)
-    .slice(-30)
-    .reverse();
+  result.activity_logs = ctx.tier === 'rich'
+    ? readRows_('activity_logs').filter((r) => r.user_id === userId).map(stripMeta_).slice(-30).reverse()
+    : [];
+  result.plan = {
+    tier: ctx.tier,
+    status: String(ctx.user.status || 'active'),
+    expires_at: ctx.expiresAt,
+    is_expired: ctx.isExpired,
+  };
   return result;
 }
 
@@ -353,6 +516,12 @@ function handleUpsertItem_(auth, payload) {
   const mod = payload.module;
   if (DATA_MODULES.indexOf(mod) === -1) throw new Error('Modul tidak valid.');
   const item = payload.item || {};
+
+  const ctx = getUserPlanContext_(userId);
+  assertWritablePlan_(ctx);
+  if (ctx.tier === 'sederhana' && ['vendors', 'rundowns', 'assets'].indexOf(mod) !== -1) {
+    throw new Error('Fitur ini tersedia mulai paket Medium / Rich.');
+  }
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -379,6 +548,10 @@ function handleUpsertItem_(auth, payload) {
       logActivity_(userId, 'UPDATE', mod, getItemLabel_(mod, merged), actor, now);
       return { item: merged };
     } else {
+      if (ctx.tier === 'sederhana' && mod === 'guests') {
+        const count = readRows_('guests').filter((r) => r.user_id === userId).length;
+        if (count >= 100) throw new Error('Paket Sederhana maksimal 100 tamu. Upgrade ke Medium/Rich untuk unlimited.');
+      }
       const created = Object.assign({}, item, {
         id: mod.slice(0, 3) + '_' + Utilities.getUuid().slice(0, 8),
         user_id: userId,
@@ -403,6 +576,8 @@ function handleDeleteItem_(auth, payload) {
   const mod = payload.module;
   const id = payload.id;
   if (DATA_MODULES.indexOf(mod) === -1) throw new Error('Modul tidak valid.');
+  const ctx = getUserPlanContext_(userId);
+  assertWritablePlan_(ctx);
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -422,14 +597,18 @@ function handleDeleteItem_(auth, payload) {
 function handleUploadReceipt_(auth, payload) {
   const userId = auth.userId;
   const actor = resolveActorEmail_(auth);
+  const ctx = getUserPlanContext_(userId);
+  assertWritablePlan_(ctx);
+  if (ctx.tier === 'sederhana') {
+    throw new Error('Upload bukti ke Google Drive tersedia mulai paket Medium / Rich.');
+  }
   const base64 = String(payload.base64 || '');
   const mimeType = String(payload.mimeType || 'image/jpeg');
   const filename = String(payload.filename || ('kwitansi_' + Date.now() + '.jpg'));
   if (!base64) throw new Error('File bukti tidak boleh kosong.');
 
-  const users = readRows_('users');
-  const user = users.find((u) => u.id === userId);
-  const customFolderId = extractDriveFolderId_(user && user.drive_folder_id);
+  const user = ctx.user;
+  const customFolderId = ctx.tier === 'rich' ? extractDriveFolderId_(user && user.drive_folder_id) : '';
 
   let targetFolder;
   if (customFolderId) {
@@ -487,59 +666,29 @@ function handleUploadReceipt_(auth, payload) {
   };
 }
 
-function extractDriveFileId_(url) {
-  const s = String(url || '').trim();
-  if (!s) return '';
-  const m1 = s.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (m1) return m1[1];
-  const m2 = s.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  return m2 ? m2[1] : '';
-}
-
 function handleResetUserData_(auth) {
   const userId = auth.userId;
   const actor = resolveActorEmail_(auth);
+  const ctx = getUserPlanContext_(userId);
+  assertWritablePlan_(ctx);
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const fileIds = {};
-    const collectUrl = (u) => {
-      const fid = extractDriveFileId_(u);
-      if (fid) fileIds[fid] = true;
-    };
-
     let totalDeleted = 0;
     DATA_MODULES.forEach((mod) => {
       const sheet = ss.getSheetByName(mod);
       if (!sheet) return;
       const rows = readRows_(mod).filter((r) => r.user_id === userId);
-      rows.forEach((r) => {
-        collectUrl(r.drive_url);
-        collectUrl(r.receipt_url);
-        if (r.installments_json) {
-          try {
-            const arr = JSON.parse(r.installments_json);
-            if (Array.isArray(arr)) arr.forEach((c) => collectUrl(c.receipt_url));
-          } catch (e) {}
-        }
-      });
       for (let i = rows.length - 1; i >= 0; i--) {
         sheet.deleteRow(rows[i]._rowIndex);
         totalDeleted += 1;
       }
     });
 
-    let driveDeleted = 0;
-    Object.keys(fileIds).forEach((fid) => {
-      try {
-        DriveApp.getFileById(fid).setTrashed(true);
-        driveDeleted += 1;
-      } catch (e) {}
-    });
-
-    logActivity_(userId, 'RESET_ALL', 'all', 'Reset semua data akun & ' + driveDeleted + ' file Drive', actor, new Date().toISOString());
-    return { deleted: totalDeleted, drive_deleted: driveDeleted };
+    // File di Google Drive client TIDAK dihapus agar bukti tetap aman di Drive client
+    logActivity_(userId, 'RESET_ALL', 'all', 'Reset data akun (file Drive tetap aman)', actor, new Date().toISOString());
+    return { deleted: totalDeleted };
   } finally {
     lock.releaseLock();
   }
@@ -565,6 +714,7 @@ function handlePublicEventInfo_(payload) {
     name: user.name,
     partner_name: user.partner_name,
     wedding_date: user.wedding_date,
+    tier: String(user.tier || 'rich').toLowerCase(),
     guest: guest,
   };
 }
@@ -573,6 +723,11 @@ function handlePublicGuestQrCheckin_(payload) {
   const userId = String(payload.user_id || '').trim();
   const guestId = String(payload.guest_id || '').trim();
   if (!userId || !guestId) throw new Error('Link tamu tidak valid.');
+  const ctx = getUserPlanContext_(userId);
+  assertWritablePlan_(ctx);
+  if (ctx.tier !== 'rich') {
+    throw new Error('Scan QR pribadi tamu khusus untuk paket Rich.');
+  }
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);

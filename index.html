@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
-  <link rel="stylesheet" href="styles.css?v=24" />
+  <link rel="stylesheet" href="styles.css?v=25" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -46,6 +46,10 @@
 
       <!-- Register Form -->
       <form id="register-form" class="auth-form hidden">
+        <div class="field">
+          <label for="reg-license">Kode Lisensi (Wajib)</label>
+          <input id="reg-license" type="text" required placeholder="Contoh: MWP-MED-XXXXXX" />
+        </div>
         <div class="field">
           <label for="reg-name">Nama Anda</label>
           <input id="reg-name" type="text" required placeholder="Contoh: Raka" />
@@ -124,6 +128,7 @@
         <p class="muted">Kehadiran Anda telah tercatat di buku tamu.</p>
         <button type="button" id="btn-checkin-again" class="btn btn-outline btn-full">Isi untuk Tamu Lain</button>
       </div>
+      <p id="checkin-watermark" class="muted hidden" style="text-align:center;margin-top:14px;font-size:0.78rem">Powered by My Weeding Plan</p>
     </div>
   </section>
 
@@ -148,6 +153,7 @@
         <h3>Kehadiran Tercatat!</h3>
         <p id="gs-success-msg" class="muted">Status Anda sudah otomatis diperbarui menjadi Hadir.</p>
       </div>
+      <p id="gs-watermark" class="muted hidden" style="text-align:center;margin-top:14px;font-size:0.78rem">Powered by My Weeding Plan</p>
     </div>
   </section>
 
@@ -206,6 +212,7 @@
       </nav>
 
       <div class="sidebar-footer">
+        <div id="plan-badge" class="badge badge-ok">Paket Rich</div>
         <button type="button" id="btn-theme-toggle" class="btn btn-outline btn-full">
           <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
           <span id="theme-toggle-label">Mode Gelap</span>
@@ -236,6 +243,10 @@
           </button>
         </div>
       </header>
+
+      <div id="expired-banner" class="mode-banner hidden">
+        Masa aktif paket Anda telah berakhir (<strong>Mode Baca Saja</strong>). Silakan masukkan Kode Lisensi perpanjang di menu <strong>Pengaturan</strong> untuk mengaktifkan kembali.
+      </div>
 
       <!-- DASHBOARD -->
       <section id="tab-dashboard" class="tab-panel">
@@ -548,9 +559,21 @@
           </form>
         </div>
 
+        <form id="redeem-form" class="card danger-card form-stack">
+          <h3>Paket & Masa Aktif</h3>
+          <p id="settings-plan-info" class="muted">-</p>
+          <div class="field">
+            <label for="set-license-code">Kode Lisensi Baru (Upgrade / Perpanjang Masa Aktif)</label>
+            <input id="set-license-code" type="text" required placeholder="Contoh: MWP-RCH-XXXXXX" />
+          </div>
+          <div>
+            <button type="submit" class="btn btn-primary">Aktivasi / Perpanjang Paket</button>
+          </div>
+        </form>
+
         <div class="card danger-card form-stack">
           <h3>Reset Data Akun Ini</h3>
-          <p class="muted">Menghapus semua data Anggaran, Daftar Tamu, Vendor, Checklist, Rundown, Asset, serta file bukti di Google Drive milik akun Anda saja. Akun dan data pengguna lain tidak terpengaruh.</p>
+          <p class="muted">Menghapus semua data Anggaran, Daftar Tamu, Vendor, Checklist, Rundown, dan Asset di Spreadsheet milik akun Anda saja. File yang sudah tersimpan di Google Drive Anda tidak akan dihapus.</p>
           <div>
             <button type="button" id="btn-reset-all" class="btn btn-danger">Reset Semua Data</button>
           </div>
@@ -592,6 +615,6 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="app.js?v=24"></script>
+  <script src="app.js?v=25"></script>
 </body>
 </html>

@@ -211,25 +211,51 @@ function demoApiCall(action, payload) {
   if (action === 'register') {
     const email = (payload.email || '').trim().toLowerCase();
     const partnerEmail = (payload.partner_email || '').trim().toLowerCase();
+    const code = (payload.license_code || '').trim().toUpperCase();
+    const demoCodes = { 'DEMO-SED': ['sederhana', 180], 'DEMO-MED': ['medium', 180], 'DEMO-RCH': ['rich', 395] };
+    const [tier, days] = demoCodes[code] || ['rich', 395];
+    if (!code) throw new Error('Kode Lisensi wajib diisi (Mode Demo: DEMO-SED / DEMO-MED / DEMO-RCH).');
     if (db.users.some((u) => u.email === email || (u.partner_email && u.partner_email === email))) {
       throw new Error('Email sudah terdaftar.');
     }
     if (partnerEmail && (partnerEmail === email || db.users.some((u) => u.email === partnerEmail || u.partner_email === partnerEmail))) {
       throw new Error('Email pasangan tidak valid atau sudah dipakai.');
     }
+    const expiresAt = new Date(Date.now() + days * 86400000).toISOString();
     const user = {
       id: uid(),
       email,
-      partner_email: partnerEmail,
+      partner_email: tier === 'sederhana' ? '' : partnerEmail,
       password: payload.password,
       name: payload.name,
       partner_name: payload.partner_name,
       wedding_date: payload.wedding_date || '',
+      tier,
+      status: 'active',
+      expires_at: expiresAt,
+      license_code: code,
     };
     db.users.push(user);
     saveDemoDb(db);
     const { password, ...safeUser } = user;
     return { token: 'demo_' + user.id, user: safeUser };
+  }
+
+  if (action === 'redeemLicense') {
+    const code = (payload.license_code || '').trim().toUpperCase();
+    const demoCodes = { 'DEMO-SED': ['sederhana', 180], 'DEMO-MED': ['medium', 180], 'DEMO-RCH': ['rich', 395] };
+    if (!demoCodes[code]) throw new Error('Kode tidak valid (Mode Demo: DEMO-SED / DEMO-MED / DEMO-RCH).');
+    const [newTier, days] = demoCodes[code];
+    const userId = state.token.replace('demo_', '');
+    const currentUser = db.users.find((u) => u.id === userId);
+    if (!currentUser) throw new Error('Sesi tidak valid.');
+    currentUser.tier = newTier;
+    currentUser.status = 'active';
+    const baseMs = currentUser.expires_at ? Math.max(Date.now(), new Date(currentUser.expires_at).getTime()) : Date.now();
+    currentUser.expires_at = new Date(baseMs + days * 86400000).toISOString();
+    saveDemoDb(db);
+    const { password, ...safeUser } = currentUser;
+    return { user: safeUser };
   }
 
   if (action === 'login') {
@@ -485,6 +511,78 @@ function formatTimeId(val) {
   return s;
 }
 
+function getUserTier() {
+  return String(state.user?.tier || 'rich').toLowerCase();
+}
+
+function isAccountExpired() {
+  const exp = state.user?.expires_at;
+  if (!exp) return false;
+  return Date.now() > new Date(exp).getTime();
+}
+
+function getTierCaps() {
+  const t = getUserTier();
+  return {
+    tier: t,
+    collab: t !== 'sederhana',
+    vendors: t !== 'sederhana',
+    rundowns: t !== 'sederhana',
+    assets: t !== 'sederhana',
+    receipts: t !== 'sederhana',
+    cicilan: t !== 'sederhana',
+    darkMode: t !== 'sederhana',
+    qrGeneral: t !== 'sederhana',
+    qrPersonal: t === 'rich',
+    customDrive: t === 'rich',
+    auditLog: t === 'rich',
+    allPlans: t !== 'sederhana',
+  };
+}
+
+function applyTierUi() {
+  if (!state.user) return;
+  const caps = getTierCaps();
+  const expired = isAccountExpired();
+  const tierLabels = { sederhana: 'Paket Sederhana', medium: 'Paket Medium', rich: 'Paket Rich' };
+  const label = tierLabels[caps.tier] || 'Paket Rich';
+
+  const exp = state.user.expires_at;
+  let daysLeftText = 'Aktif';
+  if (exp) {
+    const diff = Math.ceil((new Date(exp).getTime() - Date.now()) / 86400000);
+    daysLeftText = diff > 0 ? `Sisa ${diff} hari (${formatDateId(exp)})` : `Expired (${formatDateId(exp)})`;
+  }
+
+  const badge = $('plan-badge');
+  if (badge) {
+    badge.textContent = `${label} • ${daysLeftText}`;
+    badge.className = `badge ${expired ? 'badge-bad' : 'badge-ok'}`;
+  }
+  const infoEl = $('settings-plan-info');
+  if (infoEl) {
+    infoEl.textContent = `Paket saat ini: ${label} • ${daysLeftText}.`;
+  }
+  const expBanner = $('expired-banner');
+  if (expBanner) expBanner.classList.toggle('hidden', !expired);
+
+  // Toggle nav items & sections by tier
+  document.querySelector('[data-tab="vendors"]')?.classList.toggle('hidden', !caps.vendors);
+  document.querySelector('[data-tab="rundowns"]')?.classList.toggle('hidden', !caps.rundowns);
+  document.querySelector('[data-tab="assets"]')?.classList.toggle('hidden', !caps.assets);
+  $('btn-theme-toggle')?.classList.toggle('hidden', !caps.darkMode);
+  if (!caps.darkMode) applyTheme('light');
+  $('btn-show-qr')?.classList.toggle('hidden', !caps.qrGeneral);
+  document.querySelector('.activity-card')?.classList.toggle('hidden', !caps.auditLog);
+  $('set-partner-email')?.closest('.field')?.classList.toggle('hidden', !caps.collab);
+  $('set-drive-folder')?.closest('.field')?.classList.toggle('hidden', !caps.customDrive);
+
+  // Read-only lock when expired
+  document.querySelectorAll('[data-add], #btn-reset-all').forEach((el) => {
+    el.disabled = expired;
+  });
+}
+
 function renderUserHeader() {
   const u = state.user;
   const dateStr = normalizeDateStr(u.wedding_date);
@@ -509,11 +607,19 @@ function renderUserHeader() {
   } else {
     cd.textContent = 'Atur tanggal pernikahan di Pengaturan';
   }
+  applyTierUi();
 }
 
 async function loadAllData() {
   try {
     const res = await apiCall('getAll');
+    if (res.plan && state.user) {
+      state.user.tier = res.plan.tier;
+      state.user.status = res.plan.status;
+      state.user.expires_at = res.plan.expires_at;
+      localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(state.user));
+      applyTierUi();
+    }
     state.data = {
       budgets: res.budgets || [],
       guests: res.guests || [],
@@ -819,7 +925,11 @@ const WEDDING_PLANS = [
 function renderPlans() {
   const container = $('plans-grid');
   if (!container) return;
-  container.innerHTML = WEDDING_PLANS.map((plan) => {
+  const caps = getTierCaps();
+  const list = caps.allPlans
+    ? WEDDING_PLANS
+    : WEDDING_PLANS.filter((p) => p.id === 'kua-hemat' || p.id === 'sederhana');
+  container.innerHTML = list.map((plan) => {
     const totalEst = plan.budgets.reduce((sum, b) => sum + b.estimated, 0);
     return `
       <article class="card plan-card">
@@ -988,10 +1098,11 @@ function renderDashboard() {
 }
 
 function actionButtons(module, id) {
-  const cicilanBtn = (module === 'budgets' || module === 'vendors')
+  const caps = getTierCaps();
+  const cicilanBtn = (caps.cicilan && (module === 'budgets' || module === 'vendors'))
     ? `<button type="button" class="btn btn-sm btn-outline" onclick="openInstallmentModal('${module}', '${id}')">+ Cicilan</button>`
     : '';
-  const guestLinkBtn = module === 'guests'
+  const guestLinkBtn = (caps.qrPersonal && module === 'guests')
     ? `<button type="button" class="btn btn-sm btn-outline" onclick="copyGuestPersonalLink('${id}')">Link Scan</button>`
     : '';
   return `<div class="action-btns">
@@ -1186,6 +1297,9 @@ function openModal(module, existingItem = null) {
       return `<div class="field"><label>${escapeHtml(f.label)}</label><input type="text" inputmode="numeric" data-currency="1" name="${f.key}" value="${escapeHtml(formatted)}" ${f.required ? 'required' : ''} /></div>`;
     }
     if (f.type === 'receipt') {
+      if (!getTierCaps().receipts && module !== 'assets') {
+        return `<div class="muted" style="font-size:0.82rem">Upload bukti Google Drive tersedia di paket Medium / Rich.</div>`;
+      }
       const currentLink = val
         ? `<div class="audit-meta">File saat ini: <a class="receipt-link" href="${escapeHtml(val)}" target="_blank" rel="noopener">Lihat Kwitansi</a></div>`
         : '';
@@ -1343,7 +1457,7 @@ window.syncCameraFile = (camInput) => {
 window.toggleBudgetDone = async (id, checked) => {
   const item = state.data.budgets.find((b) => b.id === id);
   if (!item) return;
-  if (checked && !item.receipt_url) {
+  if (checked && getTierCaps().receipts && !item.receipt_url) {
     renderBudgets();
     showToast('Wajib upload foto/bukti kwitansi terlebih dahulu sebelum checklist!', true);
     openModal('budgets', item);
@@ -1369,7 +1483,7 @@ window.toggleBudgetDone = async (id, checked) => {
 window.toggleChecklist = async (id, checked) => {
   const item = state.data.checklists.find((c) => c.id === id);
   if (!item) return;
-  if (checked && !item.receipt_url) {
+  if (checked && getTierCaps().receipts && !item.receipt_url) {
     renderChecklists();
     renderDashboard();
     showToast('Wajib upload foto/bukti terlebih dahulu sebelum checklist!', true);
@@ -1457,6 +1571,7 @@ document.addEventListener('DOMContentLoaded', () => {
     withButtonLock(btn, 'Mendaftar...', async () => {
       try {
         const res = await apiCall('register', {
+          license_code: $('reg-license').value.trim(),
           name: $('reg-name').value,
           partner_name: $('reg-partner').value,
           wedding_date: $('reg-date').value,
@@ -1619,7 +1734,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const wantsDone =
               (ctx.module === 'budgets' && item.status === 'Lunas') ||
               (ctx.module === 'checklists' && item.done === 'Selesai');
-            if (wantsDone && !file && !item.receipt_url) {
+            if (wantsDone && getTierCaps().receipts && !file && !item.receipt_url) {
               throw new Error('Wajib upload foto/bukti terlebih dahulu untuk menandai Lunas/Selesai!');
             }
             if (file) {
@@ -1779,6 +1894,25 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast('URL koneksi disimpan. Silakan login ulang jika berpindah server.');
   });
 
+  $('redeem-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    withButtonLock(btn, 'Mengaktifkan...', async () => {
+      try {
+        const res = await apiCall('redeemLicense', {
+          license_code: $('set-license-code').value.trim(),
+        });
+        saveSession(state.token, { ...state.user, ...res.user });
+        $('set-license-code').value = '';
+        renderUserHeader();
+        renderAll();
+        showToast('Paket & masa aktif berhasil diperbarui!');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
+  });
+
   $('btn-export-json').addEventListener('click', () => {
     const blob = new Blob([JSON.stringify({ user: state.user, data: state.data }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
@@ -1829,6 +1963,7 @@ async function initGuestScannerView(userId, guestId) {
     $('gs-couple').textContent = `${info.name} & ${info.partner_name}`;
     const guestName = info.guest ? info.guest.name : 'Tamu Undangan';
     $('gs-guest-greeting').textContent = `Halo, ${guestName}!`;
+    $('gs-watermark')?.classList.toggle('hidden', info.tier === 'rich');
     if (info.guest && info.guest.rsvp === 'Hadir') {
       $('gs-scan-box').classList.add('hidden');
       $('gs-success-msg').textContent = `Terima kasih ${guestName}, kehadiran Anda sudah tercatat Hadir.`;
@@ -1940,6 +2075,7 @@ async function initCheckinView(userId) {
     $('checkin-couple').textContent = `${info.name} & ${info.partner_name}`;
     const dateStr = formatDateId(info.wedding_date);
     $('checkin-date').textContent = dateStr ? `Buku Tamu • ${dateStr}` : 'Buku Tamu Pernikahan';
+    $('checkin-watermark')?.classList.toggle('hidden', info.tier === 'rich');
   } catch (err) {
     showToast(err.message, true);
   }
