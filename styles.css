@@ -133,16 +133,40 @@ h1, h2, h3, .brand-title {
 .auth-wrapper {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 24px;
   padding: 24px;
 }
 
+.auth-wrapper.with-pricing {
+  align-items: flex-start;
+  max-width: 1420px;
+  margin: 0 auto;
+}
+
+.auth-wrapper.with-pricing .auth-card {
+  flex-shrink: 0;
+  position: sticky;
+  top: 24px;
+}
+
 .pricing-showcase {
-  width: 100%;
-  max-width: 980px;
+  flex: 1;
+  min-width: 0;
+  max-width: 960px;
+}
+
+@media (max-width: 980px) {
+  .auth-wrapper.with-pricing {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .auth-wrapper.with-pricing .auth-card {
+    position: static;
+  }
 }
 
 .pricing-grid {
