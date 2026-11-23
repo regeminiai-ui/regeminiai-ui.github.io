@@ -8,6 +8,7 @@
 const SCHEMAS = {
   users: ['id', 'email', 'name', 'partner_name', 'wedding_date', 'password_hash', 'salt', 'created_at', 'partner_email', 'drive_folder_id', 'tier', 'status', 'expires_at', 'license_code'],
   licenses: ['code', 'tier', 'duration_days', 'status', 'used_by_email', 'used_at', 'created_at'],
+  payments: ['id', 'buyer_email', 'tier', 'amount', 'method', 'license_code', 'notes', 'confirmed_at'],
   budgets: ['id', 'user_id', 'category', 'item', 'estimated', 'actual', 'paid', 'status', 'notes', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'installments_json', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   guests: ['id', 'user_id', 'name', 'side', 'group', 'pax', 'rsvp', 'phone', 'notes', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   vendors: ['id', 'user_id', 'category', 'name', 'pic', 'phone', 'price', 'dp_paid', 'status', 'notes', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'installments_json', 'created_at', 'created_by', 'updated_at', 'updated_by'],
@@ -67,6 +68,18 @@ function doPost(e) {
     if (action === 'publicEventInfo') return jsonResponse({ ok: true, data: handlePublicEventInfo_(payload) });
     if (action === 'publicCheckin') return jsonResponse({ ok: true, data: handlePublicCheckin_(payload) });
     if (action === 'publicGuestQrCheckin') return jsonResponse({ ok: true, data: handlePublicGuestQrCheckin_(payload) });
+
+    // Admin routes (protected by Admin Key)
+    if (action && action.indexOf('admin') === 0) {
+      verifyAdminKey_(payload.admin_key);
+      if (action === 'adminDashboard') return jsonResponse({ ok: true, data: handleAdminDashboard_() });
+      if (action === 'adminGenerateCodes') return jsonResponse({ ok: true, data: handleAdminGenerateCodes_(payload) });
+      if (action === 'adminConfirmPayment') return jsonResponse({ ok: true, data: handleAdminConfirmPayment_(payload) });
+      if (action === 'adminSetUserStatus') return jsonResponse({ ok: true, data: handleAdminSetUserStatus_(payload) });
+      if (action === 'adminDeleteUser') return jsonResponse({ ok: true, data: handleAdminDeleteUser_(payload) });
+      if (action === 'adminUpdateKey') return jsonResponse({ ok: true, data: handleAdminUpdateKey_(payload) });
+      return jsonResponse({ ok: false, error: 'Admin action tidak dikenal: ' + action });
+    }
 
     // Protected routes
     const auth = verifyToken_(body.token);
@@ -203,8 +216,8 @@ function getUserPlanContext_(userId) {
   const user = users.find((u) => u.id === userId);
   if (!user) throw new Error('User tidak ditemukan.');
   const status = String(user.status || 'active').toLowerCase();
-  if (status === 'suspended' || status === 'blocked') {
-    throw new Error('Akun Anda dinonaktifkan. Silakan hubungi Admin.');
+  if (status !== 'active') {
+    throw new Error('Akun Anda berstatus "' + status + '". Silakan hubungi Admin.');
   }
   const tier = String(user.tier || 'rich').toLowerCase();
   const expiresAt = user.expires_at ? String(user.expires_at) : '';
@@ -324,8 +337,8 @@ function handleLogin_(payload) {
   if (hash !== user.password_hash) throw new Error('Email atau password salah.');
 
   const status = String(user.status || 'active').toLowerCase();
-  if (status === 'suspended' || status === 'blocked') {
-    throw new Error('Akun Anda dinonaktifkan. Silakan hubungi Admin.');
+  if (status !== 'active') {
+    throw new Error('Akun Anda berstatus "' + status + '". Silakan hubungi Admin.');
   }
 
   const tier = String(user.tier || 'rich').toLowerCase();
@@ -805,4 +818,135 @@ function handlePublicCheckin_(payload) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// --- Admin Panel Handlers ---
+function getAdminKey_() {
+  const props = PropertiesService.getScriptProperties();
+  let key = props.getProperty('NIKAHPLAN_ADMIN_KEY');
+  if (!key) {
+    key = 'admin-mwp-2026';
+    props.setProperty('NIKAHPLAN_ADMIN_KEY', key);
+  }
+  return key;
+}
+
+function verifyAdminKey_(inputKey) {
+  if (!inputKey || String(inputKey).trim() !== getAdminKey_()) {
+    throw new Error('Admin Key salah.');
+  }
+}
+
+function handleAdminDashboard_() {
+  const users = readRows_('users').map((u) => {
+    const clean = stripMeta_(u);
+    delete clean.password_hash;
+    delete clean.salt;
+    return clean;
+  });
+  const licenses = readRows_('licenses').map(stripMeta_).reverse();
+  const payments = readRows_('payments').map(stripMeta_).reverse();
+  return { users, licenses, payments };
+}
+
+function handleAdminGenerateCodes_(payload) {
+  const tier = String(payload.tier || 'medium').toLowerCase();
+  const count = Math.min(50, Math.max(1, Number(payload.count || 5)));
+  const codes = generateLicenses_(tier, count);
+  return { codes };
+}
+
+function handleAdminConfirmPayment_(payload) {
+  const buyerEmail = String(payload.buyer_email || '').trim().toLowerCase();
+  const tier = String(payload.tier || 'medium').toLowerCase();
+  const amount = Number(payload.amount || 0);
+  const method = String(payload.method || 'Transfer / QRIS').trim();
+  const notes = String(payload.notes || '').trim();
+  if (!buyerEmail) throw new Error('Email pembeli wajib diisi.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const codes = generateLicenses_(tier, 1);
+    const code = codes[0];
+    const now = new Date().toISOString();
+    const payment = {
+      id: 'pay_' + Utilities.getUuid().slice(0, 8),
+      buyer_email: buyerEmail,
+      tier: tier,
+      amount: amount,
+      method: method,
+      license_code: code,
+      notes: notes,
+      confirmed_at: now,
+    };
+    const paySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('payments');
+    const payHeaders = paySheet.getRange(1, 1, 1, paySheet.getLastColumn()).getValues()[0];
+    paySheet.appendRow(payHeaders.map((h) => payment[h] ?? ''));
+    return { payment, license_code: code };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleAdminSetUserStatus_(payload) {
+  const userId = String(payload.user_id || '').trim();
+  const newStatus = String(payload.status || '').trim().toLowerCase();
+  if (!userId || ['active', 'non-active', 'in-active'].indexOf(newStatus) === -1) {
+    throw new Error('Status tidak valid (pilih active / non-active / in-active).');
+  }
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const users = readRows_('users');
+    const user = users.find((u) => u.id === userId);
+    if (!user) throw new Error('User tidak ditemukan.');
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    user.status = newStatus;
+    if (payload.tier) user.tier = String(payload.tier).toLowerCase();
+    sheet.getRange(user._rowIndex, 1, 1, headers.length).setValues([headers.map((h) => user[h] ?? '')]);
+    return { user_id: userId, status: newStatus };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleAdminDeleteUser_(payload) {
+  const userId = String(payload.user_id || '').trim();
+  if (!userId) throw new Error('User ID tidak valid.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const users = readRows_('users');
+    const user = users.find((u) => u.id === userId);
+    if (!user) throw new Error('User tidak ditemukan.');
+
+    // Hapus semua data milik user_id (otomatis mencakup email utama & email pasangan)
+    // File di Google Drive client TIDAK dihapus
+    const sheetsToClean = DATA_MODULES.concat(['activity_logs']);
+    sheetsToClean.forEach((mod) => {
+      const sheet = ss.getSheetByName(mod);
+      if (!sheet) return;
+      const rows = readRows_(mod).filter((r) => r.user_id === userId);
+      for (let i = rows.length - 1; i >= 0; i--) {
+        sheet.deleteRow(rows[i]._rowIndex);
+      }
+    });
+
+    ss.getSheetByName('users').deleteRow(user._rowIndex);
+    return { deleted: true, email: user.email, partner_email: user.partner_email || '' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleAdminUpdateKey_(payload) {
+  const newKey = String(payload.new_key || '').trim();
+  if (newKey.length < 6) throw new Error('Admin Key baru minimal 6 karakter.');
+  PropertiesService.getScriptProperties().setProperty('NIKAHPLAN_ADMIN_KEY', newKey);
+  return { updated: true };
 }

@@ -288,6 +288,56 @@ function demoApiCall(action, payload) {
     return { guest: db.guests[idx] };
   }
 
+  if (action && action.startsWith('admin')) {
+    if (payload.admin_key !== (localStorage.getItem('nikahplan_demo_admin_key') || 'admin-mwp-2026')) {
+      throw new Error('Admin Key salah.');
+    }
+    db.licenses = db.licenses || [];
+    db.payments = db.payments || [];
+    if (action === 'adminDashboard') {
+      return { users: db.users, licenses: [...db.licenses].reverse(), payments: [...db.payments].reverse() };
+    }
+    if (action === 'adminGenerateCodes') {
+      const daysMap = { sederhana: 180, medium: 180, rich: 395 };
+      const preMap = { sederhana: 'SED', medium: 'MED', rich: 'RCH' };
+      const codes = [];
+      for (let i = 0; i < (Number(payload.count) || 5); i++) {
+        const c = `MWP-${preMap[payload.tier] || 'GEN'}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+        db.licenses.push({ code: c, tier: payload.tier, duration_days: daysMap[payload.tier] || 180, status: 'unused', used_by_email: '', used_at: '', created_at: new Date().toISOString() });
+        codes.push(c);
+      }
+      saveDemoDb(db);
+      return { codes };
+    }
+    if (action === 'adminConfirmPayment') {
+      const c = `MWP-${(payload.tier || 'med').slice(0, 3).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      db.licenses.push({ code: c, tier: payload.tier, duration_days: payload.tier === 'rich' ? 395 : 180, status: 'unused', used_by_email: '', used_at: '', created_at: new Date().toISOString() });
+      const pay = { id: uid(), buyer_email: payload.buyer_email, tier: payload.tier, amount: payload.amount || 0, method: payload.method || '', license_code: c, confirmed_at: new Date().toISOString() };
+      db.payments.push(pay);
+      saveDemoDb(db);
+      return { payment: pay, license_code: c };
+    }
+    if (action === 'adminSetUserStatus') {
+      const u = db.users.find((x) => x.id === payload.user_id);
+      if (!u) throw new Error('User tidak ditemukan.');
+      u.status = payload.status;
+      saveDemoDb(db);
+      return { user_id: u.id, status: u.status };
+    }
+    if (action === 'adminDeleteUser') {
+      db.users = db.users.filter((x) => x.id !== payload.user_id);
+      ['budgets', 'guests', 'vendors', 'checklists', 'rundowns', 'assets'].forEach((m) => {
+        db[m] = (db[m] || []).filter((x) => x.user_id !== payload.user_id);
+      });
+      saveDemoDb(db);
+      return { deleted: true };
+    }
+    if (action === 'adminUpdateKey') {
+      localStorage.setItem('nikahplan_demo_admin_key', payload.new_key);
+      return { updated: true };
+    }
+  }
+
   if (action === 'publicCheckin') {
     const u = db.users.find((x) => x.id === payload.user_id);
     if (!u) throw new Error('Acara tidak ditemukan.');
@@ -1931,13 +1981,213 @@ document.addEventListener('DOMContentLoaded', () => {
   const guestCheckinUserId = params.get('guest_checkin');
   const guestId = params.get('guest_id');
   const checkinUserId = params.get('checkin');
-  if (guestCheckinUserId && guestId) {
+  const isAdminParam = params.get('admin');
+  $('btn-open-admin')?.addEventListener('click', openAdminView);
+  if (isAdminParam) {
+    openAdminView();
+  } else if (guestCheckinUserId && guestId) {
     initGuestScannerView(guestCheckinUserId, guestId);
   } else if (checkinUserId) {
     initCheckinView(checkinUserId);
   } else {
     renderAuthOrApp();
   }
+});
+
+let adminKeySession = '';
+
+function openAdminView() {
+  $('auth-view').classList.add('hidden');
+  $('app-view').classList.add('hidden');
+  $('checkin-view').classList.add('hidden');
+  $('guest-scanner-view').classList.add('hidden');
+  $('admin-view').classList.remove('hidden');
+}
+
+function exitAdminView() {
+  adminKeySession = '';
+  $('admin-view').classList.add('hidden');
+  $('admin-content').classList.add('hidden');
+  $('admin-login-box').classList.remove('hidden');
+  renderAuthOrApp();
+}
+
+async function loadAdminDashboard() {
+  try {
+    const data = await apiCall('adminDashboard', { admin_key: adminKeySession });
+    $('admin-login-box').classList.add('hidden');
+    $('admin-content').classList.remove('hidden');
+    renderAdminTables(data);
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+function renderAdminTables({ users = [], licenses = [], payments = [] }) {
+  $('tbody-admin-users').innerHTML = users.length
+    ? users.map((u) => {
+        const st = String(u.status || 'active').toLowerCase();
+        const badgeCls = st === 'active' ? 'badge-ok' : 'badge-bad';
+        return `
+          <tr>
+            <td data-label="Pasangan"><strong>${escapeHtml(u.name)} & ${escapeHtml(u.partner_name)}</strong></td>
+            <td data-label="Email Utama">${escapeHtml(u.email)}</td>
+            <td data-label="Email Pasangan">${escapeHtml(u.partner_email || '-')}</td>
+            <td data-label="Paket"><span class="badge badge-neutral">${escapeHtml((u.tier || 'rich').toUpperCase())}</span></td>
+            <td data-label="Status"><span class="badge ${badgeCls}">${escapeHtml(st)}</span></td>
+            <td data-label="Masa Aktif">${escapeHtml(u.expires_at ? formatDateId(u.expires_at) : 'Tanpa Batas')}</td>
+            <td data-label="Aksi" class="td-actions">
+              <div class="action-btns">
+                ${st !== 'active' ? `<button type="button" class="btn btn-sm btn-outline" onclick="adminChangeStatus('${u.id}', 'active')">Active</button>` : ''}
+                ${st !== 'non-active' ? `<button type="button" class="btn btn-sm btn-outline" onclick="adminChangeStatus('${u.id}', 'non-active')">Non-Active</button>` : ''}
+                ${st !== 'in-active' ? `<button type="button" class="btn btn-sm btn-outline" onclick="adminChangeStatus('${u.id}', 'in-active')">In-Active</button>` : ''}
+                <button type="button" class="btn btn-sm btn-danger" onclick="adminRemoveUser('${u.id}', '${escapeHtml(u.email)}', '${escapeHtml(u.partner_email || '')}')">Hapus</button>
+              </div>
+            </td>
+          </tr>`;
+      }).join('')
+    : '<tr class="empty-row"><td colspan="7" class="muted">Belum ada user terdaftar.</td></tr>';
+
+  $('tbody-admin-licenses').innerHTML = licenses.length
+    ? licenses.slice(0, 50).map((l) => `
+      <tr>
+        <td data-label="Kode"><code>${escapeHtml(l.code)}</code></td>
+        <td data-label="Paket">${escapeHtml(String(l.tier || '').toUpperCase())}</td>
+        <td data-label="Status"><span class="badge ${l.status === 'unused' ? 'badge-ok' : 'badge-neutral'}">${escapeHtml(l.status)}</span></td>
+        <td data-label="Dipakai Oleh">${escapeHtml(l.used_by_email || '-')}</td>
+        <td data-label="Aksi" class="td-actions"><button type="button" class="btn btn-sm btn-outline" onclick="copyCheckinUrl('${escapeHtml(l.code)}')">Salin</button></td>
+      </tr>`).join('')
+    : '<tr class="empty-row"><td colspan="5" class="muted">Belum ada kode lisensi.</td></tr>';
+
+  $('tbody-admin-payments').innerHTML = payments.length
+    ? payments.slice(0, 50).map((p) => `
+      <tr>
+        <td data-label="Pembeli">${escapeHtml(p.buyer_email)}</td>
+        <td data-label="Paket">${escapeHtml(String(p.tier || '').toUpperCase())}</td>
+        <td data-label="Nominal">${formatRp(p.amount)}</td>
+        <td data-label="Kode"><code>${escapeHtml(p.license_code)}</code></td>
+        <td data-label="Tanggal">${escapeHtml(formatDateTimeId(p.confirmed_at))}</td>
+      </tr>`).join('')
+    : '<tr class="empty-row"><td colspan="5" class="muted">Belum ada konfirmasi pembayaran.</td></tr>';
+}
+
+window.adminChangeStatus = (userId, status) => {
+  openConfirmModal({
+    title: 'Ubah Status User',
+    message: `Ubah status akun ini menjadi "${status}"?`,
+    confirmText: 'Ya, Ubah',
+    onConfirm: async () => {
+      try {
+        await apiCall('adminSetUserStatus', { admin_key: adminKeySession, user_id: userId, status });
+        showToast(`Status user diubah ke ${status}.`);
+        await loadAdminDashboard();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    },
+  });
+};
+
+window.adminRemoveUser = (userId, email, partnerEmail) => {
+  const pairText = partnerEmail ? `${email} & pasangannya (${partnerEmail})` : email;
+  openConfirmModal({
+    title: 'Hapus User Permanen',
+    message: `Hapus akun ${pairText} beserta seluruh datanya di Spreadsheet? (File di Google Drive tidak dihapus).`,
+    confirmText: 'Ya, Hapus User',
+    isDanger: true,
+    onConfirm: async () => {
+      try {
+        await apiCall('adminDeleteUser', { admin_key: adminKeySession, user_id: userId });
+        showToast(`Akun ${pairText} beserta datanya berhasil dihapus.`);
+        await loadAdminDashboard();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    },
+  });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  $('btn-admin-exit')?.addEventListener('click', exitAdminView);
+  $('btn-admin-refresh')?.addEventListener('click', loadAdminDashboard);
+
+  $('admin-auth-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    adminKeySession = $('admin-key-input').value.trim();
+    const btn = e.target.querySelector('button[type="submit"]');
+    withButtonLock(btn, 'Memeriksa...', loadAdminDashboard);
+  });
+
+  $('adm-pay-amount')?.addEventListener('input', (e) => {
+    const digits = e.target.value.replace(/[^\d]/g, '');
+    e.target.value = digits ? Number(digits).toLocaleString('en-US') : '';
+  });
+
+  $('admin-payment-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    withButtonLock(btn, 'Memproses...', async () => {
+      try {
+        const res = await apiCall('adminConfirmPayment', {
+          admin_key: adminKeySession,
+          buyer_email: $('adm-pay-email').value.trim(),
+          tier: $('adm-pay-tier').value,
+          amount: parseCurrency($('adm-pay-amount').value),
+          method: $('adm-pay-method').value.trim(),
+        });
+        const box = $('adm-pay-result');
+        box.innerHTML = `Pembayaran dikonfirmasi! Kode Lisensi: <strong>${escapeHtml(res.license_code)}</strong> <button type="button" class="link-btn" onclick="copyCheckinUrl('${escapeHtml(res.license_code)}')">Salin</button>`;
+        box.classList.remove('hidden');
+        e.target.reset();
+        showToast('Pembayaran dikonfirmasi & kode dibuat!');
+        await loadAdminDashboard();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
+  });
+
+  $('admin-gen-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    withButtonLock(btn, 'Generating...', async () => {
+      try {
+        const res = await apiCall('adminGenerateCodes', {
+          admin_key: adminKeySession,
+          tier: $('adm-gen-tier').value,
+          count: $('adm-gen-count').value,
+        });
+        const box = $('adm-gen-result');
+        const listText = (res.codes || []).join(', ');
+        box.innerHTML = `Berhasil generate ${res.codes.length} kode:<br><code>${escapeHtml(listText)}</code> <button type="button" class="link-btn" onclick="copyCheckinUrl('${escapeHtml(listText)}')">Salin Semua</button>`;
+        box.classList.remove('hidden');
+        showToast(`${res.codes.length} kode lisensi berhasil dibuat!`);
+        await loadAdminDashboard();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
+  });
+
+  $('admin-key-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const newKey = $('adm-new-key').value.trim();
+    if (newKey.length < 6) {
+      showToast('Admin Key baru minimal 6 karakter.', true);
+      return;
+    }
+    const btn = e.target.querySelector('button[type="submit"]');
+    withButtonLock(btn, 'Menyimpan...', async () => {
+      try {
+        await apiCall('adminUpdateKey', { admin_key: adminKeySession, new_key: newKey });
+        adminKeySession = newKey;
+        $('adm-new-key').value = '';
+        showToast('Admin Key berhasil diperbarui!');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
+  });
 });
 
 window.copyGuestPersonalLink = async (guestId) => {

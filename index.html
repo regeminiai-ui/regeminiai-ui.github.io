@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
-  <link rel="stylesheet" href="styles.css?v=25" />
+  <link rel="stylesheet" href="styles.css?v=26" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -79,6 +79,154 @@
 
       <div class="auth-footer">
         <button type="button" id="btn-open-api-config" class="link-btn">Konfigurasi URL Google Apps Script</button>
+        <span class="muted"> • </span>
+        <button type="button" id="btn-open-admin" class="link-btn">Panel Admin</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADMIN PANEL VIEW -->
+  <section id="admin-view" class="main-content hidden" style="margin:0 auto;max-width:1280px">
+    <header class="topbar">
+      <div>
+        <h2>Panel Admin — My Weeding Plan</h2>
+        <p class="muted">Kelola user, status (active / non-active / in-active), konfirmasi pembayaran & generate kode lisensi.</p>
+      </div>
+      <div class="topbar-actions btn-row">
+        <button type="button" id="btn-admin-refresh" class="btn btn-outline">Refresh</button>
+        <button type="button" id="btn-admin-exit" class="btn btn-ghost">Kembali ke Login</button>
+      </div>
+    </header>
+
+    <div id="admin-login-box" class="card form-stack" style="max-width:420px;margin:24px auto">
+      <h3>Masuk Admin</h3>
+      <p class="muted">Default Admin Key: <code>admin-mwp-2026</code> (bisa diubah setelah masuk).</p>
+      <form id="admin-auth-form" class="form-stack">
+        <div class="field">
+          <label for="admin-key-input">Admin Key</label>
+          <input id="admin-key-input" type="password" required placeholder="Masukkan Admin Key" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Buka Panel Admin</button>
+      </form>
+    </div>
+
+    <div id="admin-content" class="hidden">
+      <div class="grid-2" style="margin-bottom:20px">
+        <form id="admin-payment-form" class="card form-stack">
+          <h3>Konfirmasi Pembayaran & Buat Kode</h3>
+          <div class="field">
+            <label for="adm-pay-email">Email Pembeli</label>
+            <input id="adm-pay-email" type="email" required placeholder="pembeli@gmail.com" />
+          </div>
+          <div class="field">
+            <label for="adm-pay-tier">Paket</label>
+            <select id="adm-pay-tier">
+              <option value="sederhana">Sederhana (6 Bulan)</option>
+              <option value="medium" selected>Medium (6 Bulan)</option>
+              <option value="rich">Rich (12 + 1 Bulan)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="adm-pay-amount">Nominal Bayar (Rp)</label>
+            <input id="adm-pay-amount" type="text" inputmode="numeric" placeholder="Contoh: 150,000" />
+          </div>
+          <div class="field">
+            <label for="adm-pay-method">Metode / Catatan</label>
+            <input id="adm-pay-method" type="text" value="Transfer / QRIS" />
+          </div>
+          <button type="submit" class="btn btn-primary">Konfirmasi & Generate 1 Kode</button>
+          <div id="adm-pay-result" class="mode-banner hidden"></div>
+        </form>
+
+        <div class="card form-stack">
+          <form id="admin-gen-form" class="form-stack">
+            <h3>Generate Stok Kode Lisensi</h3>
+            <div class="field">
+              <label for="adm-gen-tier">Paket</label>
+              <select id="adm-gen-tier">
+                <option value="sederhana">Sederhana (6 Bulan)</option>
+                <option value="medium" selected>Medium (6 Bulan)</option>
+                <option value="rich">Rich (12 + 1 Bulan)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="adm-gen-count">Jumlah Kode (1–50)</label>
+              <input id="adm-gen-count" type="number" min="1" max="50" value="5" />
+            </div>
+            <button type="submit" class="btn btn-outline">Generate Kode</button>
+          </form>
+          <div id="adm-gen-result" class="mode-banner hidden"></div>
+
+          <form id="admin-key-form" class="form-stack" style="margin-top:8px;padding-top:12px;border-top:1.5px dashed var(--border-soft)">
+            <div class="field">
+              <label for="adm-new-key">Ganti Admin Key</label>
+              <div class="btn-row">
+                <input id="adm-new-key" type="password" minlength="6" placeholder="Admin Key baru (min 6 char)" style="flex:1" />
+                <button type="submit" class="btn btn-outline btn-sm">Ubah Key</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">
+          <h3>Manajemen User & Pasangan</h3>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Pasangan</th>
+                <th>Email Utama</th>
+                <th>Email Pasangan</th>
+                <th>Paket</th>
+                <th>Status</th>
+                <th>Masa Aktif</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-admin-users"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><h3>Kode Lisensi</h3></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Kode</th>
+                  <th>Paket</th>
+                  <th>Status</th>
+                  <th>Dipakai Oleh</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-admin-licenses"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>Riwayat Konfirmasi Pembayaran</h3></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Pembeli</th>
+                  <th>Paket</th>
+                  <th>Nominal</th>
+                  <th>Kode</th>
+                  <th>Tanggal</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-admin-payments"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -615,6 +763,6 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="app.js?v=25"></script>
+  <script src="app.js?v=26"></script>
 </body>
 </html>
