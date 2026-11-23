@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
   <link rel="icon" type="image/png" href="assets/img/logo-light.png" />
-  <link rel="stylesheet" href="styles.css?v=52" />
+  <link rel="stylesheet" href="styles.css?v=53" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -223,6 +223,7 @@
                   <option value="sederhana">Sederhana (6 Bulan)</option>
                   <option value="medium" selected>Medium (6 Bulan)</option>
                   <option value="rich">Rich (12 + 1 Bulan)</option>
+                  <option value="konglo">Konglo (15 + 3 Bulan Bonus)</option>
                 </select>
                 <input id="adm-gen-count" type="number" min="1" max="50" value="5" style="width:110px" />
               </div>
@@ -265,6 +266,7 @@
                   <option value="sederhana">Sederhana (6 Bulan)</option>
                   <option value="medium" selected>Medium (6 Bulan)</option>
                   <option value="rich">Rich (12 + 1 Bulan)</option>
+                  <option value="konglo">Konglo (15 + 3 Bulan Bonus)</option>
                 </select>
               </div>
               <div class="field">
@@ -334,6 +336,15 @@
                   <div class="field" style="flex:1"><label>Harga Promo (0 = Normal)</label><input id="adm-promo-rch" type="text" inputmode="numeric" /></div>
                 </div>
                 <div class="field"><label>Label Diskon (Opsional)</label><input id="adm-label-rch" type="text" placeholder="Contoh: DISKON 25%" /></div>
+              </div>
+
+              <div class="installment-box form-stack">
+                <strong>Paket Konglo (15 + 3 Bulan Bonus)</strong>
+                <div class="btn-row">
+                  <div class="field" style="flex:1"><label>Harga Normal (Rp)</label><input id="adm-price-kng" type="text" inputmode="numeric" /></div>
+                  <div class="field" style="flex:1"><label>Harga Promo (0 = Normal)</label><input id="adm-promo-kng" type="text" inputmode="numeric" /></div>
+                </div>
+                <div class="field"><label>Label Diskon (Opsional)</label><input id="adm-label-kng" type="text" placeholder="Contoh: EKSKLUSIF AI" /></div>
               </div>
 
               <button type="submit" class="btn btn-primary">Simpan Harga &amp; Promo</button>
@@ -576,6 +587,29 @@
 
       <!-- REKOMENDASI PLAN -->
       <section id="tab-plans" class="tab-panel hidden">
+        <div id="ai-planner-section" class="card ai-planner-card hidden">
+          <div class="plan-card-head">
+            <div>
+              <h3>AI Wedding Plan Generator</h3>
+              <p class="muted">Khusus Paket Konglo: ceritakan konsep, perkiraan tamu &amp; budget Anda. Hasil tersimpan di browser Anda dan bisa diterapkan kapanpun.</p>
+            </div>
+            <span class="badge badge-promo">AI Konglo</span>
+          </div>
+          <form id="ai-plan-form" class="form-stack">
+            <div class="field">
+              <label for="ai-plan-prompt">Konsep Pernikahan Impian Anda</label>
+              <textarea id="ai-plan-prompt" rows="3" placeholder="Contoh: Nikah intimate garden outdoor 150 tamu, budget 80 juta, konsep rustic hangat..." required></textarea>
+            </div>
+            <div class="ai-chip-row">
+              <button type="button" class="btn btn-sm btn-outline ai-prompt-chip" data-prompt="Nikah intimate garden outdoor untuk 150 tamu, budget 80 juta, konsep rustic hangat.">Intimate 80 Jt</button>
+              <button type="button" class="btn btn-sm btn-outline ai-prompt-chip" data-prompt="Resepsi ballroom hotel mewah untuk 500 tamu, budget 220 juta, adat Jawa modern.">Ballroom 220 Jt</button>
+              <button type="button" class="btn btn-sm btn-outline ai-prompt-chip" data-prompt="Walimah syari sederhana dan khidmat untuk 200 tamu, budget 50 juta.">Walimah Syari 50 Jt</button>
+            </div>
+            <button type="submit" id="btn-ai-generate" class="btn btn-primary">Buat Rencana Otomatis dengan AI</button>
+          </form>
+          <div id="ai-plans-list" class="plans-grid" style="margin-top:16px"></div>
+        </div>
+
         <div class="card plan-intro">
           <h3>Pilih Paket Rekomendasi Pernikahan</h3>
           <p class="muted">Pilih salah satu konsep di bawah untuk mengisi otomatis pos <strong>Anggaran</strong> dan daftar <strong>Checklist</strong>. Setelah diterapkan, Anda tinggal mencentang item yang sudah maupun yang belum selesai.</p>
@@ -890,6 +924,7 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="app.js?v=52"></script>
+  <script src="ai-planner.js?v=53"></script>
+  <script src="app.js?v=53"></script>
 </body>
 </html>

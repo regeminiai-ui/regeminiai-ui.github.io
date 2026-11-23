@@ -721,6 +721,17 @@ h1, h2, h3, .brand-title {
   text-align: center;
 }
 
+.ai-planner-card {
+  margin-bottom: 18px;
+  border-color: var(--primary);
+}
+
+.ai-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 [data-theme="dark"] .promo-banner {
   background: linear-gradient(135deg, #3d2529, #4a232b);
   color: #f9b4c0;

@@ -739,6 +739,7 @@ function getDefaultPricing() {
     sederhana: { price: 79000, promo_price: 0, promo_label: '' },
     medium: { price: 149000, promo_price: 0, promo_label: '' },
     rich: { price: 249000, promo_price: 0, promo_label: '' },
+    konglo: { price: 349000, promo_price: 0, promo_label: '' },
   };
 }
 
@@ -809,6 +810,20 @@ function renderPricingShowcase(pricingData) {
         'Tanpa Watermark di Halaman Check-In',
         'Custom Folder Google Drive Pribadi',
         'Riwayat Aktivitas (Audit Log) Pasangan',
+      ],
+    },
+    {
+      key: 'konglo',
+      name: 'Konglo',
+      subtitle: 'Sultan + AI Planner otomatis',
+      featured: true,
+      defaultBadge: 'VIP AI',
+      features: [
+        'Masa Aktif 15 + 3 Bulan Bonus',
+        'Semua Fitur Rich',
+        'AI Wedding Plan Generator (Rekomendasi Otomatis)',
+        'Simpan Banyak Konsep AI di Browser (Lokal)',
+        'Terapkan Plan AI Langsung ke Budget & Checklist',
       ],
     },
   ];
@@ -942,11 +957,12 @@ function getTierCaps() {
     receipts: t !== 'sederhana',
     cicilan: t !== 'sederhana',
     darkMode: t !== 'sederhana',
-    glassTheme: t === 'rich',
+    glassTheme: t === 'rich' || t === 'konglo',
     qrGeneral: t !== 'sederhana',
-    qrPersonal: t === 'rich',
-    customDrive: t === 'rich',
-    auditLog: t === 'rich',
+    qrPersonal: t === 'rich' || t === 'konglo',
+    customDrive: t === 'rich' || t === 'konglo',
+    auditLog: t === 'rich' || t === 'konglo',
+    aiPlanner: t === 'konglo',
     allPlans: t !== 'sederhana',
   };
 }
@@ -955,7 +971,12 @@ function applyTierUi() {
   if (!state.user) return;
   const caps = getTierCaps();
   const expired = isAccountExpired();
-  const tierLabels = { sederhana: 'Paket Sederhana', medium: 'Paket Medium', rich: 'Paket Rich' };
+  const tierLabels = {
+    sederhana: 'Paket Sederhana',
+    medium: 'Paket Medium',
+    rich: 'Paket Rich',
+    konglo: 'Paket Konglo',
+  };
   const label = tierLabels[caps.tier] || 'Paket Rich';
 
   const exp = state.user.expires_at;
@@ -1354,7 +1375,51 @@ const WEDDING_PLANS = [
   },
 ];
 
+function renderAiPlans() {
+  const section = $('ai-planner-section');
+  const listEl = $('ai-plans-list');
+  if (!section || !listEl) return;
+  const caps = getTierCaps();
+  section.classList.toggle('hidden', !caps.aiPlanner);
+  if (!caps.aiPlanner || !window.NikahAiPlanner) {
+    listEl.innerHTML = '';
+    return;
+  }
+  const saved = window.NikahAiPlanner.loadSavedPlans(state.user?.id);
+  listEl.innerHTML = saved.length
+    ? saved.map((plan) => {
+        const totalEst = (plan.budgets || []).reduce((s, b) => s + Number(b.estimated || 0), 0);
+        return `
+          <article class="card plan-card">
+            <div class="plan-card-head">
+              <h3>${escapeHtml(plan.name)}</h3>
+              <span class="badge badge-promo">${escapeHtml(plan.badge || 'AI')}</span>
+            </div>
+            <div class="plan-budget-total">Estimasi: ${formatRp(totalEst)}</div>
+            <p class="muted">${escapeHtml(plan.summary)}</p>
+            <div>
+              <div class="plan-section-title">Ringkasan Anggaran (${plan.budgets.length} pos)</div>
+              <ul class="plan-preview-list">
+                ${plan.budgets.map((b) => `<li><span>${escapeHtml(b.item)}</span><strong>${formatRp(b.estimated)}</strong></li>`).join('')}
+              </ul>
+            </div>
+            <div>
+              <div class="plan-section-title">Checklist Persiapan (${plan.checklists.length} tugas)</div>
+              <ul class="plan-preview-list">
+                ${plan.checklists.map((c) => `<li><span>${escapeHtml(c.task)}</span><span class="muted">${escapeHtml(c.phase)}</span></li>`).join('')}
+              </ul>
+            </div>
+            <div class="plan-card-footer btn-row">
+              <button type="button" class="btn btn-primary" style="flex:1" ${isDummyMode() ? 'disabled' : ''} onclick="applyAiPlan('${escapeHtml(plan.id)}', this)">Terapkan</button>
+              <button type="button" class="btn btn-danger" onclick="deleteAiPlan('${escapeHtml(plan.id)}')">Hapus</button>
+            </div>
+          </article>`;
+      }).join('')
+    : '<p class="muted">Belum ada rencana AI tersimpan. Tulis konsep pernikahan Anda di atas lalu klik Buat Rencana Otomatis.</p>';
+}
+
 function renderPlans() {
+  renderAiPlans();
   const container = $('plans-grid');
   if (!container) return;
   const caps = getTierCaps();
@@ -1394,10 +1459,8 @@ function renderPlans() {
   }).join('');
 }
 
-window.applyWeddingPlan = async (planId, btnEl) => {
-  const plan = WEDDING_PLANS.find((p) => p.id === planId);
+function executeApplyPlan(plan, btnEl) {
   if (!plan) return;
-
   const hasExisting = state.data.budgets.length > 0 || state.data.checklists.length > 0;
   const msg = hasExisting
     ? `Tambahkan ${plan.budgets.length} pos anggaran dan ${plan.checklists.length} checklist dari ${plan.name} ke data Anda?`
@@ -1442,6 +1505,24 @@ window.applyWeddingPlan = async (planId, btnEl) => {
       }
     },
   });
+}
+
+window.applyWeddingPlan = async (planId, btnEl) => {
+  const plan = WEDDING_PLANS.find((p) => p.id === planId);
+  executeApplyPlan(plan, btnEl);
+};
+
+window.applyAiPlan = async (planId, btnEl) => {
+  if (!window.NikahAiPlanner) return;
+  const plan = window.NikahAiPlanner.loadSavedPlans(state.user?.id).find((p) => p.id === planId);
+  executeApplyPlan(plan, btnEl);
+};
+
+window.deleteAiPlan = (planId) => {
+  if (!window.NikahAiPlanner) return;
+  window.NikahAiPlanner.deletePlan(state.user?.id, planId);
+  renderAiPlans();
+  showToast('Plan AI dihapus dari browser.');
 };
 
 function statusBadge(text) {
@@ -2645,6 +2726,9 @@ function renderAdminTables({ users = [], licenses = [], payments = [], pricing =
   if ($('adm-price-rch')) $('adm-price-rch').value = fmtOpt(p.rich?.price);
   if ($('adm-promo-rch')) $('adm-promo-rch').value = fmtOpt(p.rich?.promo_price);
   if ($('adm-label-rch')) $('adm-label-rch').value = p.rich?.promo_label || '';
+  if ($('adm-price-kng')) $('adm-price-kng').value = fmtOpt(p.konglo?.price);
+  if ($('adm-promo-kng')) $('adm-promo-kng').value = fmtOpt(p.konglo?.promo_price);
+  if ($('adm-label-kng')) $('adm-label-kng').value = p.konglo?.promo_label || '';
 
   $('tbody-admin-payments').innerHTML = payments.length
     ? payments.slice(0, 50).map((p) => `
@@ -2746,10 +2830,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  ['adm-price-sed', 'adm-promo-sed', 'adm-price-med', 'adm-promo-med', 'adm-price-rch', 'adm-promo-rch'].forEach((id) => {
+  ['adm-price-sed', 'adm-promo-sed', 'adm-price-med', 'adm-promo-med', 'adm-price-rch', 'adm-promo-rch', 'adm-price-kng', 'adm-promo-kng'].forEach((id) => {
     $(id)?.addEventListener('input', (e) => {
       const digits = e.target.value.replace(/[^\d]/g, '');
       e.target.value = digits ? Number(digits).toLocaleString('en-US') : '';
+    });
+  });
+
+  document.querySelectorAll('.ai-prompt-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      if ($('ai-plan-prompt')) $('ai-plan-prompt').value = chip.dataset.prompt || '';
+    });
+  });
+
+  $('ai-plan-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!getTierCaps().aiPlanner || !window.NikahAiPlanner) return;
+    const prompt = ($('ai-plan-prompt')?.value || '').trim();
+    if (!prompt) return;
+    const btn = $('btn-ai-generate');
+    withButtonLock(btn, 'AI sedang merancang...', async () => {
+      await new Promise((r) => setTimeout(r, 850));
+      const plan = window.NikahAiPlanner.generatePlanFromPrompt(prompt);
+      window.NikahAiPlanner.savePlan(state.user?.id, plan);
+      renderAiPlans();
+      showToast('Plan AI berhasil dibuat & disimpan di browser Anda!');
     });
   });
 
@@ -2774,6 +2879,11 @@ document.addEventListener('DOMContentLoaded', () => {
             price: parseCurrency($('adm-price-rch').value),
             promo_price: parseCurrency($('adm-promo-rch').value),
             promo_label: $('adm-label-rch').value.trim(),
+          },
+          konglo: {
+            price: parseCurrency($('adm-price-kng').value),
+            promo_price: parseCurrency($('adm-promo-kng').value),
+            promo_label: $('adm-label-kng').value.trim(),
           },
         };
         const res = await apiCall('adminSavePricing', { admin_key: adminKeySession, pricing });
