@@ -507,6 +507,36 @@ function auditMetaHtml(row) {
   return parts.length ? `<div class="audit-meta">${parts.join(' • ')}</div>` : '';
 }
 
+function parseInstallments(row) {
+  if (!row || !row.installments_json) return [];
+  try {
+    const arr = typeof row.installments_json === 'string'
+      ? JSON.parse(row.installments_json)
+      : row.installments_json;
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function installmentsHtml(row) {
+  const list = parseInstallments(row);
+  if (!list.length) return '';
+  const total = list.reduce((s, x) => s + Number(x.amount || 0), 0);
+  return `
+    <div class="installment-box">
+      <strong>Cicilan (${list.length}x • Total ${formatRp(total)}):</strong>
+      <ul class="installment-list">
+        ${list.map((c, idx) => `
+          <li class="installment-row">
+            <span>#${idx + 1} ${formatRp(c.amount)}${c.note ? ` (${escapeHtml(c.note)})` : ''} • ${escapeHtml(formatDateId(c.date) || '')}</span>
+            ${c.receipt_url ? `<a class="receipt-link" href="${escapeHtml(c.receipt_url)}" target="_blank" rel="noopener">Bukti</a>` : ''}
+          </li>`).join('')}
+      </ul>
+    </div>
+  `;
+}
+
 function receiptHtml(row) {
   if (!row.receipt_url) return '';
   const meta = row.receipt_uploaded_by
@@ -897,7 +927,11 @@ function renderDashboard() {
 }
 
 function actionButtons(module, id) {
+  const cicilanBtn = (module === 'budgets' || module === 'vendors')
+    ? `<button type="button" class="btn btn-sm btn-outline" onclick="openInstallmentModal('${module}', '${id}')">+ Cicilan</button>`
+    : '';
   return `
+    ${cicilanBtn}
     <button type="button" class="btn btn-sm btn-outline" onclick="openEditModal('${module}', '${id}')">Edit</button>
     <button type="button" class="btn btn-sm btn-danger" onclick="deleteRecord('${module}', '${id}')">Hapus</button>
   `;
@@ -924,6 +958,7 @@ function renderBudgets() {
             <strong>${escapeHtml(b.item)}</strong>
             ${b.notes ? `<div class="muted">${escapeHtml(b.notes)}</div>` : ''}
             ${receiptHtml(b)}
+            ${installmentsHtml(b)}
             ${auditMetaHtml(b)}
           </div>
         </td>
@@ -968,7 +1003,7 @@ function renderVendors() {
     ? rows.map((v) => `
       <tr>
         <td data-label="Kategori">${escapeHtml(v.category)}</td>
-        <td data-label="Vendor"><div><strong>${escapeHtml(v.name)}</strong>${v.notes ? `<div class="muted">${escapeHtml(v.notes)}</div>` : ''}${receiptHtml(v)}${auditMetaHtml(v)}</div></td>
+        <td data-label="Vendor"><div><strong>${escapeHtml(v.name)}</strong>${v.notes ? `<div class="muted">${escapeHtml(v.notes)}</div>` : ''}${receiptHtml(v)}${installmentsHtml(v)}${auditMetaHtml(v)}</div></td>
         <td data-label="PIC">${escapeHtml(v.pic || '-')}</td>
         <td data-label="Kontak">${escapeHtml(v.phone || '-')}</td>
         <td data-label="Harga">${formatRp(v.price)}</td>
@@ -1113,6 +1148,51 @@ function closeConfirmModal() {
 window.openEditModal = (module, id) => {
   const item = state.data[module].find((r) => r.id === id);
   if (item) openModal(module, item);
+};
+
+window.openInstallmentModal = (module, id) => {
+  const item = state.data[module].find((r) => r.id === id);
+  if (!item) return;
+  const list = parseInstallments(item);
+  const label = item.item || item.name || '-';
+  state.modalContext = { type: 'installment', module, id };
+  $('modal-title').textContent = `Tambah Cicilan — ${label}`;
+
+  $('modal-fields').innerHTML = `
+    ${installmentsHtml(item) || '<p class="muted">Belum ada riwayat cicilan untuk item ini.</p>'}
+    <div class="field">
+      <label>Nominal Cicilan (Rp)</label>
+      <input type="text" inputmode="numeric" data-currency="1" name="amount" required placeholder="Contoh: 1,000,000" />
+    </div>
+    <div class="field">
+      <label>Tanggal Bayar</label>
+      <input type="date" name="date" value="${new Date().toISOString().slice(0, 10)}" required />
+    </div>
+    <div class="field">
+      <label>Keterangan Cicilan</label>
+      <input type="text" name="note" placeholder="Contoh: DP 1 / Termin 2" />
+    </div>
+    <div class="field">
+      <label>Bukti Foto / Kamera HP (Opsional)</label>
+      <div class="btn-row">
+        <input type="file" accept="image/*,application/pdf" data-receipt-file="1" style="flex:1" />
+        <button type="button" class="btn btn-outline btn-sm" onclick="this.nextElementSibling.click()">Kamera HP</button>
+        <input type="file" accept="image/*" capture="environment" data-receipt-camera="1" class="hidden" onchange="syncCameraFile(this)" />
+      </div>
+      <div class="audit-meta" data-receipt-selected="1"></div>
+    </div>
+    <p class="muted">Menambah cicilan akan memperbarui total terbayar & status menjadi DP/Deal tanpa mencentang Lunas otomatis (centang manual jika sudah lunas).</p>
+  `;
+
+  $('modal-fields').querySelectorAll('input[data-currency="1"]').forEach((inp) => {
+    inp.addEventListener('input', () => {
+      const digits = inp.value.replace(/[^\d]/g, '');
+      inp.value = digits ? Number(digits).toLocaleString('en-US') : '';
+    });
+  });
+
+  document.querySelector('#modal-form .modal-actions').classList.remove('hidden');
+  $('modal-backdrop').classList.remove('hidden');
 };
 
 window.deleteRecord = (module, id) => {
@@ -1322,6 +1402,84 @@ document.addEventListener('DOMContentLoaded', () => {
       updateModeBanner();
       closeModal();
       showToast('URL Google Apps Script diperbarui.');
+      return;
+    }
+
+    if (ctx?.type === 'installment') {
+      const btn = e.target.querySelector('button[type="submit"]');
+      const existing = state.data[ctx.module].find((r) => r.id === ctx.id);
+      if (!existing) return;
+      const amount = parseCurrency(formData.get('amount'));
+      if (amount <= 0) {
+        showToast('Nominal cicilan harus lebih dari 0.', true);
+        return;
+      }
+      withButtonLock(btn, 'Menyimpan cicilan...', async () => {
+        try {
+          let receiptUrl = '';
+          let uploadedAt = '';
+          let uploadedBy = '';
+          const fileInput = $('modal-fields').querySelector('input[data-receipt-file="1"]');
+          const file = fileInput?.files?.[0];
+          if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+              throw new Error('Ukuran file bukti maksimal 5 MB.');
+            }
+            btn.textContent = 'Mengupload bukti...';
+            const base64 = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+              reader.onerror = () => reject(new Error('Gagal membaca file.'));
+              reader.readAsDataURL(file);
+            });
+            const up = await apiCall('uploadReceipt', {
+              module: ctx.module,
+              filename: file.name,
+              mimeType: file.type || 'image/jpeg',
+              base64,
+            });
+            receiptUrl = up.url;
+            uploadedAt = up.uploaded_at;
+            uploadedBy = up.uploaded_by;
+            pushLocalLog('UPLOAD_RECEIPT', ctx.module, file.name);
+          }
+
+          const list = parseInstallments(existing);
+          list.push({
+            amount,
+            date: String(formData.get('date') || ''),
+            note: String(formData.get('note') || '').trim(),
+            receipt_url: receiptUrl,
+            uploaded_at: uploadedAt,
+            uploaded_by: uploadedBy,
+          });
+          const totalCicilan = list.reduce((s, x) => s + Number(x.amount || 0), 0);
+          const paidField = ctx.module === 'budgets' ? 'paid' : 'dp_paid';
+          const nextStatus = existing.status === 'Lunas'
+            ? 'Lunas'
+            : (ctx.module === 'budgets' ? 'DP' : (existing.status === 'Survey' ? 'Deal' : existing.status));
+
+          const updatedItem = {
+            ...existing,
+            installments_json: JSON.stringify(list),
+            [paidField]: Math.max(Number(existing[paidField] || 0) + amount, totalCicilan),
+            status: nextStatus,
+            receipt_url: receiptUrl || existing.receipt_url || '',
+            receipt_uploaded_at: uploadedAt || existing.receipt_uploaded_at || '',
+            receipt_uploaded_by: uploadedBy || existing.receipt_uploaded_by || '',
+          };
+
+          const res = await apiCall('upsertItem', { module: ctx.module, item: updatedItem });
+          const idx = state.data[ctx.module].findIndex((r) => r.id === ctx.id);
+          if (idx !== -1) state.data[ctx.module][idx] = res.item;
+          pushLocalLog('UPDATE', ctx.module, `${existing.item || existing.name} (+Cicilan ${formatRp(amount)})`);
+          renderAll();
+          closeModal();
+          showToast('Cicilan tersimpan! Centang Lunas secara manual bila sudah selesai.');
+        } catch (err) {
+          showToast(err.message, true);
+        }
+      });
       return;
     }
 

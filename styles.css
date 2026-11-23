@@ -762,6 +762,31 @@ input[type="checkbox"] {
   margin-top: 4px;
 }
 
+.installment-box {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: var(--surface-alt);
+  border: 1.5px dashed var(--border-soft);
+  border-radius: 8px;
+  font-size: 0.78rem;
+}
+
+.installment-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.installment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .modal-card {
   width: 100%;
   max-width: 480px;
