@@ -158,8 +158,107 @@ function isDemoMode() {
   return !state.apiUrl.trim();
 }
 
+function isDummyMode() {
+  return Boolean(state.user?.is_dummy || state.token === 'dummy_preview_token');
+}
+
+const DUMMY_PREVIEW_DATA = {
+  budgets: [
+    {
+      id: 'dum_b1',
+      category: 'Venue & Dekorasi',
+      item: 'Garden Venue + Dekorasi Rustic',
+      actual: 18000000,
+      paid: 9000000,
+      status: 'DP',
+      notes: 'Plan Intimate (Cafe/Garden)',
+      installments_json: JSON.stringify([
+        { amount: 5000000, date: '2026-11-01', note: 'Booking Fee', uploaded_by: 'dummy@gmail.com', uploaded_at: '2026-11-01T10:00:00Z' },
+        { amount: 4000000, date: '2026-11-15', note: 'DP 50%', uploaded_by: 'pasangan@gmail.com', uploaded_at: '2026-11-15T14:30:00Z' },
+      ]),
+      created_by: 'dummy@gmail.com',
+      updated_by: 'pasangan@gmail.com',
+      updated_at: '2026-11-15T14:30:00Z',
+    },
+    {
+      id: 'dum_b2',
+      category: 'Catering',
+      item: 'Buffet 120 Pax + 2 Gubukan',
+      actual: 16000000,
+      paid: 16000000,
+      status: 'Lunas',
+      notes: 'Plan Intimate (Cafe/Garden)',
+      created_by: 'dummy@gmail.com',
+      updated_by: 'dummy@gmail.com',
+      updated_at: '2026-11-10T09:15:00Z',
+    },
+    {
+      id: 'dum_b3',
+      category: 'Busana & MUA',
+      item: 'MUA & Attire Akad/Resepsi',
+      actual: 7500000,
+      paid: 0,
+      status: 'Belum Bayar',
+      notes: 'Rencana fitting bulan depan',
+      created_by: 'pasangan@gmail.com',
+      created_at: '2026-11-20T11:00:00Z',
+    },
+  ],
+  guests: [
+    { id: 'dum_g1', name: 'Keluarga Bpk. Hendra', side: 'Mempelai Pria', group: 'Keluarga', pax: 4, rsvp: 'Hadir', phone: '0812xxxx', created_by: 'dummy@gmail.com', created_at: '2026-11-05T08:00:00Z' },
+    { id: 'dum_g2', name: 'Rina & Partner', side: 'Mempelai Wanita', group: 'Teman', pax: 2, rsvp: 'Belum', phone: '0856xxxx', created_by: 'pasangan@gmail.com', created_at: '2026-11-06T12:00:00Z' },
+  ],
+  vendors: [
+    { id: 'dum_v1', category: 'Foto & Video', name: 'Lensa Bahagia Studio', pic: 'Dimas', phone: '@lensabahagia', price: 5500000, dp_paid: 2000000, status: 'Deal', created_by: 'dummy@gmail.com', updated_at: '2026-11-12T16:00:00Z' },
+  ],
+  checklists: [
+    { id: 'dum_c1', phase: 'H-3 Bulan', task: 'Food tasting menu catering', pic: 'Raka & Nadia', due_date: '2027-03-20', done: 'Belum', created_by: 'dummy@gmail.com', created_at: '2026-11-01T09:00:00Z' },
+    { id: 'dum_c2', phase: 'H-6 Bulan', task: 'Survei & DP venue garden', pic: 'Raka', due_date: '2026-12-20', done: 'Selesai', created_by: 'dummy@gmail.com', updated_at: '2026-11-15T14:30:00Z' },
+  ],
+  rundowns: [
+    { id: 'dum_r1', event_name: 'Akad / Pemberkatan', start_time: '08:00', end_time: '09:30', activity: 'Prosesi Akad Nikah', pic: 'Penghulu & WO', location: 'Pendopo Garden', created_by: 'dummy@gmail.com', created_at: '2026-11-10T10:00:00Z' },
+    { id: 'dum_r2', event_name: 'Resepsi', start_time: '11:00', end_time: '14:00', activity: 'Ramah Tamah & Foto Bersama', pic: 'MC & WO', location: 'Area Taman', created_by: 'pasangan@gmail.com', created_at: '2026-11-10T10:15:00Z' },
+  ],
+  assets: [
+    { id: 'dum_a1', module: 'budgets', item_label: 'Garden Venue + Dekorasi Rustic', file_name: 'kwitansi-dp-venue.jpg', drive_url: '', description: 'Contoh bukti DP 50% (Mode Preview)', uploaded_by: 'pasangan@gmail.com', uploaded_at: '2026-11-15T14:30:00Z', created_at: '2026-11-15T14:30:00Z', created_by: 'pasangan@gmail.com' },
+  ],
+};
+
 // --- API Layer (Google Apps Script + Demo Fallback) ---
 async function apiCall(action, payload = {}) {
+  if (action === 'login') {
+    const email = String(payload.email || '').trim().toLowerCase();
+    const pass = String(payload.password || '');
+    if (email === 'dummy@gmail.com' && pass === '123456') {
+      return {
+        token: 'dummy_preview_token',
+        user: {
+          id: 'dummy_preview',
+          email: 'dummy@gmail.com',
+          partner_email: 'pasangan@gmail.com',
+          actor_email: 'dummy@gmail.com',
+          name: 'Raka',
+          partner_name: 'Nadia',
+          wedding_date: '2027-06-20',
+          tier: 'medium',
+          status: 'active',
+          is_dummy: true,
+        },
+      };
+    }
+  }
+
+  if (isDummyMode()) {
+    if (action === 'getAll') {
+      return {
+        ...JSON.parse(JSON.stringify(DUMMY_PREVIEW_DATA)),
+        activity_logs: [],
+        plan: { tier: 'medium', status: 'active', expires_at: '', is_expired: false },
+      };
+    }
+    throw new Error('Mode Preview (Dummy): Fitur ubah/simpan/hapus dimatikan. Daftar dengan Kode Lisensi untuk akun penuh.');
+  }
+
   if (isDemoMode()) {
     return demoApiCall(action, payload);
   }
@@ -602,15 +701,25 @@ function applyTierUi() {
 
   const badge = $('plan-badge');
   if (badge) {
-    badge.textContent = `${label} • ${daysLeftText}`;
-    badge.className = `badge ${expired ? 'badge-bad' : 'badge-ok'}`;
+    badge.textContent = isDummyMode() ? 'Mode Preview (Dummy)' : `${label} • ${daysLeftText}`;
+    badge.className = `badge ${isDummyMode() ? 'badge-warn' : (expired ? 'badge-bad' : 'badge-ok')}`;
   }
   const infoEl = $('settings-plan-info');
   if (infoEl) {
-    infoEl.textContent = `Paket saat ini: ${label} • ${daysLeftText}${exp ? ` (s/d ${formatDateId(exp)})` : ''}.`;
+    infoEl.textContent = isDummyMode()
+      ? 'Akun Dummy Preview (fitur Rich disembunyikan & edit/simpan dimatikan).'
+      : `Paket saat ini: ${label} • ${daysLeftText}${exp ? ` (s/d ${formatDateId(exp)})` : ''}.`;
   }
   const expBanner = $('expired-banner');
-  if (expBanner) expBanner.classList.toggle('hidden', !expired);
+  if (expBanner) {
+    if (isDummyMode()) {
+      expBanner.innerHTML = '<strong>Mode Preview (Akun Dummy)</strong>: Anda sedang melihat preview aplikasi (fitur khusus paket Rich disembunyikan &amp; fitur simpan/hapus/upload dimatikan).';
+      expBanner.classList.remove('hidden');
+    } else {
+      expBanner.innerHTML = 'Masa aktif paket Anda telah berakhir (<strong>Mode Baca Saja</strong>). Silakan masukkan Kode Lisensi perpanjang di menu <strong>Pengaturan</strong> untuk mengaktifkan kembali.';
+      expBanner.classList.toggle('hidden', !expired);
+    }
+  }
 
   // Toggle nav items & sections by tier
   document.querySelector('[data-tab="vendors"]')?.classList.toggle('hidden', !caps.vendors);
@@ -623,9 +732,10 @@ function applyTierUi() {
   $('set-partner-email')?.closest('.field')?.classList.toggle('hidden', !caps.collab);
   $('set-drive-folder')?.closest('.field')?.classList.toggle('hidden', !caps.customDrive);
 
-  // Read-only lock when expired
-  document.querySelectorAll('[data-add], #btn-reset-all').forEach((el) => {
-    el.disabled = expired;
+  // Read-only lock when expired or dummy preview
+  const locked = expired || isDummyMode();
+  document.querySelectorAll('[data-add], #btn-reset-all, #profile-form button[type="submit"], #redeem-form button[type="submit"], #btn-export-json, #btn-show-qr').forEach((el) => {
+    el.disabled = locked;
   });
 }
 
@@ -1001,7 +1111,7 @@ function renderPlans() {
         </div>
 
         <div class="plan-card-footer">
-          <button type="button" class="btn btn-primary btn-full" onclick="applyWeddingPlan('${plan.id}', this)">Terapkan ${escapeHtml(plan.name)}</button>
+          <button type="button" class="btn btn-primary btn-full" ${isDummyMode() ? 'disabled' : ''} onclick="applyWeddingPlan('${plan.id}', this)">Terapkan ${escapeHtml(plan.name)}</button>
         </div>
       </article>
     `;
@@ -1144,6 +1254,9 @@ function renderDashboard() {
 }
 
 function actionButtons(module, id) {
+  if (isDummyMode()) {
+    return `<span class="muted" style="font-size:0.78rem">Preview</span>`;
+  }
   const caps = getTierCaps();
   const cicilanBtn = (caps.cicilan && (module === 'budgets' || module === 'vendors'))
     ? `<button type="button" class="btn btn-sm btn-outline" onclick="openInstallmentModal('${module}', '${id}')">+ Cicilan</button>`
@@ -1594,6 +1707,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Login submit
+  $('btn-fill-dummy')?.addEventListener('click', () => {
+    $('login-email').value = 'dummy@gmail.com';
+    $('login-password').value = '123456';
+    $('login-form').requestSubmit();
+  });
+
   $('login-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
