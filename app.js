@@ -3,8 +3,96 @@
  * Supports Google Apps Script Web App API + automatic local Demo Mode when API URL is unset.
  */
 
-// Opsional: isi URL Web App Google Apps Script di sini agar semua user langsung terhubung
-const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxVRx8ozLI8-hRirJWBt5S53w_CO4Zep_470o4k6juu_JLto4-plKLWjXKTyh24a86_/exec';
+// --- Origin Lock & Encrypted API Config ---
+const SEALED_API_HOST = 'bfoHqr6ZujU7XzBTuHF4lFAC5c87q2l0IrBQwP4cn/gq/VybhsXseSpEFGiwPTmJcyS6jjbXY2kFyH/VqD3FuHLRMJX5+fBqFwh1CqcxPcVVGPf8FMl+dHuyTc3WIqfhXcUno6WRoXtwCh0VrX0zkA==';
+const SEALED_API_OWNER = '5cucqnbZBUR32aJaMP4AmR5TR1HknniOuXZVvvdZlmqizMebToVTCGbChmE4skGEPXUYEOnicpOeDnqroXjMKvrgq5UxuU8bW47nAy++RcgbSVViy/xvjuB0SLPfZ65z1fS8o23RHgo8jI8cJfJLnQ==';
+const OWNER_KEY_HASH = '8dbfe8da05e32a6b04bad033408a2efe713c203d81b01be1d45938df942bf919';
+const OWNER_KEY_STORAGE = 'nikahplan_owner_key';
+
+function sha256BytesSync(str) {
+  const utf8 = unescape(encodeURIComponent(str));
+  const words = [];
+  for (let i = 0; i < utf8.length; i++) {
+    words[i >> 2] |= (utf8.charCodeAt(i) & 0xff) << (24 - (i % 4) * 8);
+  }
+  const bitLen = utf8.length * 8;
+  words[bitLen >> 5] |= 0x80 << (24 - (bitLen % 32));
+  words[(((bitLen + 64) >> 9) << 4) + 15] = bitLen;
+
+  const K = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+  ];
+  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  const rotr = (n, x) => (x >>> n) | (x << (32 - n));
+
+  for (let i = 0; i < words.length; i += 16) {
+    const w = new Array(64);
+    for (let t = 0; t < 16; t++) w[t] = words[i + t] | 0;
+    for (let t = 16; t < 64; t++) {
+      const s0 = rotr(7, w[t - 15]) ^ rotr(18, w[t - 15]) ^ (w[t - 15] >>> 3);
+      const s1 = rotr(17, w[t - 2]) ^ rotr(19, w[t - 2]) ^ (w[t - 2] >>> 10);
+      w[t] = (w[t - 16] + s0 + w[t - 7] + s1) | 0;
+    }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let t = 0; t < 64; t++) {
+      const S1 = rotr(6, e) ^ rotr(11, e) ^ rotr(25, e);
+      const ch = (e & f) ^ (~e & g);
+      const temp1 = (h + S1 + ch + K[t] + w[t]) | 0;
+      const S0 = rotr(2, a) ^ rotr(13, a) ^ rotr(22, a);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const temp2 = (S0 + maj) | 0;
+      h = g; g = f; f = e; e = (d + temp1) | 0;
+      d = c; c = b; b = a; a = (temp1 + temp2) | 0;
+    }
+    H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
+    H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+  }
+  const bytes = [];
+  for (let i = 0; i < 8; i++) {
+    bytes.push((H[i] >>> 24) & 0xff, (H[i] >>> 16) & 0xff, (H[i] >>> 8) & 0xff, H[i] & 0xff);
+  }
+  return bytes;
+}
+
+function sha256HexSync(str) {
+  return sha256BytesSync(str).map((b) => ('0' + b.toString(16)).slice(-2)).join('');
+}
+
+function unsealTextSync(b64, pass) {
+  try {
+    const raw = atob(b64);
+    const key = sha256BytesSync(pass);
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i) ^ key[i % key.length];
+    const decoded = new TextDecoder().decode(bytes);
+    return decoded.startsWith('https://script.google.com/') ? decoded : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function resolveAuthorizedApiUrl() {
+  const host = (window.location.hostname || '').toLowerCase();
+  if (host === 'regeminiai-ui.github.io') {
+    const url = unsealTextSync(SEALED_API_HOST, host);
+    if (url) return url;
+  }
+  const savedOwnerKey = (localStorage.getItem(OWNER_KEY_STORAGE) || '').trim();
+  if (savedOwnerKey && sha256HexSync(savedOwnerKey) === OWNER_KEY_HASH) {
+    const url = unsealTextSync(SEALED_API_OWNER, savedOwnerKey);
+    if (url) return url;
+  }
+  return '';
+}
+
+const DEFAULT_API_URL = resolveAuthorizedApiUrl();
 
 const STORAGE_KEYS = {
   apiUrl: 'nikahplan_api_url',
@@ -2285,6 +2373,34 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   $('btn-theme-toggle').addEventListener('click', toggleTheme);
   $('btn-style-toggle')?.addEventListener('click', toggleUiStyle);
+
+  if (!DEFAULT_API_URL) {
+    document.body.innerHTML = `
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+        <div class="card" style="max-width:420px;width:100%;text-align:center;">
+          <h2 style="margin-bottom:8px;">Akses Terenkripsi</h2>
+          <p class="muted" style="margin-bottom:16px;">Project ini dilindungi. Masukkan Owner Key untuk membuka enkripsi di perangkat/domain ini.</p>
+          <form id="owner-unlock-form" class="form-stack">
+            <div class="field">
+              <label for="owner-key-input">Owner Key</label>
+              <input id="owner-key-input" type="password" placeholder="MWP-VAULT-..." required />
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Buka Enkripsi</button>
+          </form>
+        </div>
+      </div>`;
+    document.getElementById('owner-unlock-form')?.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const k = (document.getElementById('owner-key-input')?.value || '').trim();
+      if (sha256HexSync(k) !== OWNER_KEY_HASH) {
+        alert('Owner Key salah!');
+        return;
+      }
+      localStorage.setItem(OWNER_KEY_STORAGE, k);
+      window.location.reload();
+    });
+    return;
+  }
 
   const params = new URLSearchParams(window.location.search);
   const guestCheckinUserId = params.get('guest_checkin');
