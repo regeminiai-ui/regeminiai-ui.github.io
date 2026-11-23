@@ -78,6 +78,7 @@ const MODULE_SCHEMAS = {
       { key: 'pic', label: 'Penanggung Jawab (PIC)', type: 'text' },
       { key: 'due_date', label: 'Target Tanggal', type: 'date' },
       { key: 'done', label: 'Status', type: 'select', options: ['Belum', 'Selesai'], default: 'Belum' },
+      { key: 'receipt_url', label: 'Bukti Foto / Dokumen (Wajib sebelum ceklist)', type: 'receipt' },
     ],
   },
   rundowns: {
@@ -989,7 +990,7 @@ function renderChecklists() {
         return `
           <tr>
             <td data-label="Tahap">${escapeHtml(c.phase)}</td>
-            <td data-label="Tugas" style="${isDone ? 'text-decoration:line-through;color:var(--muted)' : ''}"><div>${escapeHtml(c.task)}${auditMetaHtml(c)}</div></td>
+            <td data-label="Tugas" style="${isDone ? 'text-decoration:line-through;color:var(--muted)' : ''}"><div>${escapeHtml(c.task)}${receiptHtml(c)}${auditMetaHtml(c)}</div></td>
             <td data-label="PIC">${escapeHtml(c.pic || '-')}</td>
             <td data-label="Target">${escapeHtml(formatDateId(c.due_date) || '-')}</td>
             <td data-label="Status">
@@ -1046,7 +1047,12 @@ function openModal(module, existingItem = null) {
       return `
         <div class="field">
           <label>${escapeHtml(f.label)}</label>
-          <input type="file" accept="image/*,application/pdf" data-receipt-file="1" />
+          <div class="btn-row">
+            <input type="file" accept="image/*,application/pdf" data-receipt-file="1" style="flex:1" />
+            <button type="button" class="btn btn-outline btn-sm" onclick="this.nextElementSibling.click()">Kamera HP</button>
+            <input type="file" accept="image/*" capture="environment" data-receipt-camera="1" class="hidden" onchange="syncCameraFile(this)" />
+          </div>
+          <div class="audit-meta" data-receipt-selected="1"></div>
           <input type="hidden" name="receipt_url" value="${escapeHtml(val)}" />
           <input type="hidden" name="receipt_uploaded_at" value="${escapeHtml(existingItem?.receipt_uploaded_at || '')}" />
           <input type="hidden" name="receipt_uploaded_by" value="${escapeHtml(existingItem?.receipt_uploaded_by || '')}" />
@@ -1130,9 +1136,29 @@ window.deleteRecord = (module, id) => {
   });
 };
 
+window.syncCameraFile = (camInput) => {
+  const file = camInput.files?.[0];
+  if (!file) return;
+  const field = camInput.closest('.field');
+  const mainInput = field?.querySelector('input[data-receipt-file="1"]');
+  const label = field?.querySelector('[data-receipt-selected="1"]');
+  if (mainInput) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    mainInput.files = dt.files;
+  }
+  if (label) label.textContent = `Foto kamera siap diupload: ${file.name}`;
+};
+
 window.toggleBudgetDone = async (id, checked) => {
   const item = state.data.budgets.find((b) => b.id === id);
   if (!item) return;
+  if (checked && !item.receipt_url) {
+    renderBudgets();
+    showToast('Wajib upload foto/bukti kwitansi terlebih dahulu sebelum checklist!', true);
+    openModal('budgets', item);
+    return;
+  }
   const updated = {
     ...item,
     status: checked ? 'Lunas' : 'Belum Bayar',
@@ -1153,6 +1179,13 @@ window.toggleBudgetDone = async (id, checked) => {
 window.toggleChecklist = async (id, checked) => {
   const item = state.data.checklists.find((c) => c.id === id);
   if (!item) return;
+  if (checked && !item.receipt_url) {
+    renderChecklists();
+    renderDashboard();
+    showToast('Wajib upload foto/bukti terlebih dahulu sebelum checklist!', true);
+    openModal('checklists', item);
+    return;
+  }
   const updated = { ...item, done: checked ? 'Selesai' : 'Belum' };
   try {
     const res = await apiCall('upsertItem', { module: 'checklists', item: updated });
@@ -1307,6 +1340,12 @@ document.addEventListener('DOMContentLoaded', () => {
           try {
             const fileInput = $('modal-fields').querySelector('input[data-receipt-file="1"]');
             const file = fileInput?.files?.[0];
+            const wantsDone =
+              (ctx.module === 'budgets' && item.status === 'Lunas') ||
+              (ctx.module === 'checklists' && item.done === 'Selesai');
+            if (wantsDone && !file && !item.receipt_url) {
+              throw new Error('Wajib upload foto/bukti terlebih dahulu untuk menandai Lunas/Selesai!');
+            }
             if (file) {
               if (file.size > 5 * 1024 * 1024) {
                 throw new Error('Ukuran file bukti maksimal 5 MB.');

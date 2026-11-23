@@ -10,7 +10,7 @@ const SCHEMAS = {
   budgets: ['id', 'user_id', 'category', 'item', 'estimated', 'actual', 'paid', 'status', 'notes', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   guests: ['id', 'user_id', 'name', 'side', 'group', 'pax', 'rsvp', 'phone', 'notes', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   vendors: ['id', 'user_id', 'category', 'name', 'pic', 'phone', 'price', 'dp_paid', 'status', 'notes', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'created_at', 'created_by', 'updated_at', 'updated_by'],
-  checklists: ['id', 'user_id', 'phase', 'task', 'pic', 'due_date', 'done', 'created_at', 'created_by', 'updated_at', 'updated_by'],
+  checklists: ['id', 'user_id', 'phase', 'task', 'pic', 'due_date', 'done', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   rundowns: ['id', 'user_id', 'event_name', 'start_time', 'end_time', 'activity', 'pic', 'location', 'notes', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   activity_logs: ['id', 'user_id', 'action', 'module', 'item_label', 'actor_email', 'created_at'],
 };
@@ -268,7 +268,7 @@ function handleUpdateProfile_(userId, payload) {
     }
 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
-    const headers = SCHEMAS.users;
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     user.name = String(payload.name || '').trim();
     user.partner_name = String(payload.partner_name || '').trim();
     user.wedding_date = String(payload.wedding_date || '');
@@ -334,12 +334,12 @@ function handleUpsertItem_(auth, payload) {
   const mod = payload.module;
   if (DATA_MODULES.indexOf(mod) === -1) throw new Error('Modul tidak valid.');
   const item = payload.item || {};
-  const headers = SCHEMAS[mod];
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(mod);
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     const now = new Date().toISOString();
 
     if (item.id) {
