@@ -679,10 +679,10 @@ function renderPricingShowcase(pricingData) {
       key: 'sederhana',
       name: 'Sederhana',
       subtitle: 'Untuk persiapan personal',
-      duration: '6 Bulan',
       featured: false,
       defaultBadge: '',
       features: [
+        'Masa Aktif 6 Bulan',
         '1 Akun (Single)',
         'Overview & Countdown Pernikahan',
         '2 Template Rencana (KUA Hemat & Sederhana)',
@@ -695,10 +695,10 @@ function renderPricingShowcase(pricingData) {
       key: 'medium',
       name: 'Medium',
       subtitle: 'Kolaborasi lengkap berdua',
-      duration: '6 Bulan',
       featured: false,
       defaultBadge: '',
       features: [
+        'Masa Aktif 6 Bulan',
         '2 Akun Pasangan (Sync Real-time)',
         'Semua Fitur Sederhana & Semua Template',
         'Vendor, Kontrak & Upload Kwitansi',
@@ -711,7 +711,6 @@ function renderPricingShowcase(pricingData) {
       key: 'rich',
       name: 'Rich',
       subtitle: 'Eksklusif tanpa batas',
-      duration: '12 + 1 Bulan Bonus',
       featured: true,
       defaultBadge: 'Paling Lengkap',
       features: [
@@ -742,11 +741,11 @@ function renderPricingShowcase(pricingData) {
             <span class="price-original">${formatPriceRp(normalPrice)}</span>
             <span class="price-discount-pill">-${discountPct}%</span>
           </div>
-          <div class="price-tag is-promo">${formatPriceRp(promoPrice)} <span class="price-duration">/ ${t.duration}</span></div>
+          <div class="price-tag is-promo">${formatPriceRp(promoPrice)}</div>
         </div>`
       : `
         <div class="price-block">
-          <div class="price-tag">${formatPriceRp(normalPrice)} <span class="price-duration">/ ${t.duration}</span></div>
+          <div class="price-tag">${formatPriceRp(normalPrice)}</div>
         </div>`;
 
     const waMsg = encodeURIComponent(`Halo Admin Ahmad Husain, saya mau beli paket ${t.name} My Weeding Plan (${formatPriceRp(effectivePrice)}).`);
