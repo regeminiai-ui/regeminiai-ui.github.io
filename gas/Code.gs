@@ -822,11 +822,9 @@ function handlePublicCheckin_(payload) {
 
 // --- Admin Panel Handlers ---
 function getAdminKey_() {
-  const props = PropertiesService.getScriptProperties();
-  let key = props.getProperty('NIKAHPLAN_ADMIN_KEY');
+  const key = PropertiesService.getScriptProperties().getProperty('NIKAHPLAN_ADMIN_KEY');
   if (!key) {
-    key = 'admin-mwp-2026';
-    props.setProperty('NIKAHPLAN_ADMIN_KEY', key);
+    throw new Error('NIKAHPLAN_ADMIN_KEY belum diset di Apps Script Project Settings -> Script Properties.');
   }
   return key;
 }

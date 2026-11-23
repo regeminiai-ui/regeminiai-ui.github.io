@@ -289,8 +289,9 @@ function demoApiCall(action, payload) {
   }
 
   if (action && action.startsWith('admin')) {
-    if (payload.admin_key !== (localStorage.getItem('nikahplan_demo_admin_key') || 'admin-mwp-2026')) {
-      throw new Error('Admin Key salah.');
+    const demoKey = localStorage.getItem('nikahplan_demo_admin_key');
+    if (!demoKey || payload.admin_key !== demoKey) {
+      throw new Error('Mode Demo aktif: hubungkan URL Google Apps Script untuk login Admin.');
     }
     db.licenses = db.licenses || [];
     db.payments = db.payments || [];
@@ -1661,7 +1662,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Modal handlers
   $('modal-close').addEventListener('click', closeModal);
   $('modal-cancel').addEventListener('click', closeModal);
-  $('btn-open-api-config').addEventListener('click', openApiConfigModal);
+  $('btn-open-api-config')?.addEventListener('click', openApiConfigModal);
   $('btn-show-qr').addEventListener('click', openGuestQrModal);
 
   $('modal-form').addEventListener('submit', (e) => {
@@ -1977,9 +1978,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const guestCheckinUserId = params.get('guest_checkin');
   const guestId = params.get('guest_id');
   const checkinUserId = params.get('checkin');
-  const isAdminParam = params.get('admin');
-  $('btn-open-admin')?.addEventListener('click', openAdminView);
-  if (isAdminParam) {
+  const isAdminRoute = params.has('adminLogin') || window.location.hash === '#adminLogin';
+  if (isAdminRoute) {
     openAdminView();
   } else if (guestCheckinUserId && guestId) {
     initGuestScannerView(guestCheckinUserId, guestId);
