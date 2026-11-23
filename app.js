@@ -927,7 +927,7 @@ function renderDashboard() {
       ? logs.map((l) => `
         <li>
           <span><strong>${escapeHtml(actionLabels[l.action] || l.action)}</strong> • ${escapeHtml(l.item_label)} <small class="muted">(${escapeHtml(l.module)})</small></span>
-          <span class="muted">${escapeHtml(l.actor_email)} • ${escapeHtml(formatDateTimeId(l.created_at))}</span>
+          <span class="muted">${escapeHtml(resolveDisplayEmail(l.actor_email))} • ${escapeHtml(formatDateTimeId(l.created_at))}</span>
         </li>`).join('')
       : '<li class="muted">Belum ada riwayat aktivitas.</li>';
   }
