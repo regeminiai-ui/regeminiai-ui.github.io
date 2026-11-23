@@ -264,11 +264,24 @@ async function apiCall(action, payload = {}) {
   }
 
   // Use text/plain to avoid CORS preflight OPTIONS on Google Apps Script
-  const res = await fetch(state.apiUrl.trim(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, token: state.token, payload }),
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  let res;
+  try {
+    res = await fetch(state.apiUrl.trim(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, token: state.token, payload }),
+      signal: ctrl.signal,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Koneksi ke server timeout (30 detik). Coba Refresh.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
@@ -2310,6 +2323,24 @@ function switchAdminTab(tabName) {
   }
 }
 
+function renderLicenseTable(licenses = []) {
+  $('tbody-admin-licenses').innerHTML = licenses.length
+    ? licenses.slice(0, 100).map((l) => `
+      <tr>
+        <td data-label="Kode"><code>${escapeHtml(l.code)}</code></td>
+        <td data-label="Paket">${escapeHtml(String(l.tier || '').toUpperCase())}</td>
+        <td data-label="Status"><span class="badge ${l.status === 'unused' ? 'badge-ok' : 'badge-neutral'}">${escapeHtml(l.status)}</span></td>
+        <td data-label="Dipakai Oleh">${escapeHtml(l.used_by_email || '-')}</td>
+        <td data-label="Aksi" class="td-actions">
+          <div class="action-btns">
+            <button type="button" class="btn btn-sm btn-outline" onclick="copyCheckinUrl('${escapeHtml(l.code)}')">Salin</button>
+            ${l.status === 'unused' ? `<button type="button" class="btn btn-sm btn-danger" onclick="adminDeleteCode('${escapeHtml(l.code)}')">Hapus</button>` : ''}
+          </div>
+        </td>
+      </tr>`).join('')
+    : '<tr class="empty-row"><td colspan="5" class="muted">Belum ada kode lisensi.</td></tr>';
+}
+
 function renderAdminTables({ users = [], licenses = [], payments = [], pricing = null }) {
   $('tbody-admin-users').innerHTML = users.length
     ? users.map((u) => {
@@ -2336,21 +2367,7 @@ function renderAdminTables({ users = [], licenses = [], payments = [], pricing =
       }).join('')
     : '<tr class="empty-row"><td colspan="8" class="muted">Belum ada user terdaftar.</td></tr>';
 
-  $('tbody-admin-licenses').innerHTML = licenses.length
-    ? licenses.slice(0, 100).map((l) => `
-      <tr>
-        <td data-label="Kode"><code>${escapeHtml(l.code)}</code></td>
-        <td data-label="Paket">${escapeHtml(String(l.tier || '').toUpperCase())}</td>
-        <td data-label="Status"><span class="badge ${l.status === 'unused' ? 'badge-ok' : 'badge-neutral'}">${escapeHtml(l.status)}</span></td>
-        <td data-label="Dipakai Oleh">${escapeHtml(l.used_by_email || '-')}</td>
-        <td data-label="Aksi" class="td-actions">
-          <div class="action-btns">
-            <button type="button" class="btn btn-sm btn-outline" onclick="copyCheckinUrl('${escapeHtml(l.code)}')">Salin</button>
-            ${l.status === 'unused' ? `<button type="button" class="btn btn-sm btn-danger" onclick="adminDeleteCode('${escapeHtml(l.code)}')">Hapus</button>` : ''}
-          </div>
-        </td>
-      </tr>`).join('')
-    : '<tr class="empty-row"><td colspan="5" class="muted">Belum ada kode lisensi.</td></tr>';
+  renderLicenseTable(licenses);
 
   const p = { ...getDefaultPricing(), ...(pricing || {}) };
   if ($('adm-promo-banner')) $('adm-promo-banner').value = p.promo_banner || '';
@@ -2555,7 +2572,11 @@ document.addEventListener('DOMContentLoaded', () => {
         box.innerHTML = `Berhasil generate ${res.codes.length} kode:<br><code>${escapeHtml(listText)}</code> <button type="button" class="link-btn" onclick="copyCheckinUrl('${escapeHtml(listText)}')">Salin Semua</button>`;
         box.classList.remove('hidden');
         showToast(`${res.codes.length} kode lisensi berhasil dibuat!`);
-        await loadAdminDashboard();
+        if (Array.isArray(res.licenses)) {
+          renderLicenseTable(res.licenses);
+        } else {
+          await loadAdminDashboard();
+        }
       } catch (err) {
         showToast(err.message, true);
       }

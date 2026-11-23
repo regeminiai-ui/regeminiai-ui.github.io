@@ -44,12 +44,28 @@ function generateLicenses_(tier, count) {
   const prefix = prefixes[tier] || 'GEN';
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('licenses');
   const now = new Date().toISOString();
+  const total = Math.max(1, Number(count || 10));
   const codes = [];
-  for (let i = 0; i < (count || 10); i++) {
+  const rows = [];
+  const created = [];
+  for (let i = 0; i < total; i++) {
     const rand = Utilities.getUuid().replace(/-/g, '').slice(0, 6).toUpperCase();
     const code = 'MWP-' + prefix + '-' + rand;
-    sheet.appendRow([code, tier, days, 'unused', '', '', now]);
+    rows.push([code, tier, days, 'unused', '', '', now]);
     codes.push(code);
+    created.push({
+      code: code,
+      tier: tier,
+      duration_days: days,
+      status: 'unused',
+      used_by_email: '',
+      used_at: '',
+      created_at: now,
+    });
+  }
+  if (rows.length > 0) {
+    const startRow = Math.max(2, sheet.getLastRow() + 1);
+    sheet.getRange(startRow, 1, rows.length, 7).setValues(rows);
   }
   Logger.log('Generated ' + codes.length + ' ' + tier + ' codes: ' + codes.join(', '));
   return codes;
@@ -113,6 +129,10 @@ function jsonResponse(obj) {
 
 // --- Schema Initialization ---
 function ensureSchema_() {
+  const cache = CacheService.getScriptCache();
+  const schemaVer = 'v3';
+  if (cache.get('NIKAHPLAN_SCHEMA_VER') === schemaVer) return;
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   Object.keys(SCHEMAS).forEach((name) => {
     let sheet = ss.getSheetByName(name);
@@ -133,6 +153,7 @@ function ensureSchema_() {
       });
     }
   });
+  cache.put('NIKAHPLAN_SCHEMA_VER', schemaVer, 21600);
 }
 
 // --- Crypto & Auth Helpers ---
@@ -902,7 +923,8 @@ function handleAdminGenerateCodes_(payload) {
   const tier = String(payload.tier || 'medium').toLowerCase();
   const count = Math.min(50, Math.max(1, Number(payload.count || 5)));
   const codes = generateLicenses_(tier, count);
-  return { codes };
+  const licenses = readRows_('licenses').reverse();
+  return { codes, licenses };
 }
 
 function handleAdminConfirmPayment_(payload) {
