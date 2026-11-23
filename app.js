@@ -1716,7 +1716,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-reset-all').addEventListener('click', () => {
     openConfirmModal({
       title: 'Reset Semua Data',
-      message: 'Semua data Anggaran, Tamu, Vendor, Checklist, dan Rundown milik akun Anda akan dihapus permanen. Data akun lain tetap aman. Lanjutkan?',
+      message: 'Semua data Anggaran, Tamu, Vendor, Checklist, Rundown, Asset, serta file bukti di Google Drive milik akun Anda akan dihapus permanen. Data akun lain tetap aman. Lanjutkan?',
       confirmText: 'Ya, Reset Semua',
       isDanger: true,
       onConfirm: async () => {

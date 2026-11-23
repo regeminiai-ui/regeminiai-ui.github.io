@@ -487,6 +487,15 @@ function handleUploadReceipt_(auth, payload) {
   };
 }
 
+function extractDriveFileId_(url) {
+  const s = String(url || '').trim();
+  if (!s) return '';
+  const m1 = s.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (m1) return m1[1];
+  const m2 = s.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  return m2 ? m2[1] : '';
+}
+
 function handleResetUserData_(auth) {
   const userId = auth.userId;
   const actor = resolveActorEmail_(auth);
@@ -494,18 +503,43 @@ function handleResetUserData_(auth) {
   lock.waitLock(15000);
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const fileIds = {};
+    const collectUrl = (u) => {
+      const fid = extractDriveFileId_(u);
+      if (fid) fileIds[fid] = true;
+    };
+
     let totalDeleted = 0;
     DATA_MODULES.forEach((mod) => {
       const sheet = ss.getSheetByName(mod);
       if (!sheet) return;
       const rows = readRows_(mod).filter((r) => r.user_id === userId);
+      rows.forEach((r) => {
+        collectUrl(r.drive_url);
+        collectUrl(r.receipt_url);
+        if (r.installments_json) {
+          try {
+            const arr = JSON.parse(r.installments_json);
+            if (Array.isArray(arr)) arr.forEach((c) => collectUrl(c.receipt_url));
+          } catch (e) {}
+        }
+      });
       for (let i = rows.length - 1; i >= 0; i--) {
         sheet.deleteRow(rows[i]._rowIndex);
         totalDeleted += 1;
       }
     });
-    logActivity_(userId, 'RESET_ALL', 'all', 'Reset semua data akun', actor, new Date().toISOString());
-    return { deleted: totalDeleted };
+
+    let driveDeleted = 0;
+    Object.keys(fileIds).forEach((fid) => {
+      try {
+        DriveApp.getFileById(fid).setTrashed(true);
+        driveDeleted += 1;
+      } catch (e) {}
+    });
+
+    logActivity_(userId, 'RESET_ALL', 'all', 'Reset semua data akun & ' + driveDeleted + ' file Drive', actor, new Date().toISOString());
+    return { deleted: totalDeleted, drive_deleted: driveDeleted };
   } finally {
     lock.releaseLock();
   }
