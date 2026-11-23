@@ -68,6 +68,7 @@ function doPost(e) {
     if (action === 'publicEventInfo') return jsonResponse({ ok: true, data: handlePublicEventInfo_(payload) });
     if (action === 'publicCheckin') return jsonResponse({ ok: true, data: handlePublicCheckin_(payload) });
     if (action === 'publicGuestQrCheckin') return jsonResponse({ ok: true, data: handlePublicGuestQrCheckin_(payload) });
+    if (action === 'publicPricing') return jsonResponse({ ok: true, data: handlePublicPricing_() });
 
     // Admin routes (protected by Admin Key)
     if (action && action.indexOf('admin') === 0) {
@@ -77,6 +78,9 @@ function doPost(e) {
       if (action === 'adminConfirmPayment') return jsonResponse({ ok: true, data: handleAdminConfirmPayment_(payload) });
       if (action === 'adminSetUserStatus') return jsonResponse({ ok: true, data: handleAdminSetUserStatus_(payload) });
       if (action === 'adminDeleteUser') return jsonResponse({ ok: true, data: handleAdminDeleteUser_(payload) });
+      if (action === 'adminDeleteLicense') return jsonResponse({ ok: true, data: handleAdminDeleteLicense_(payload) });
+      if (action === 'adminDeleteUnusedLicenses') return jsonResponse({ ok: true, data: handleAdminDeleteUnusedLicenses_() });
+      if (action === 'adminSavePricing') return jsonResponse({ ok: true, data: handleAdminSavePricing_(payload) });
       if (action === 'adminUpdateKey') return jsonResponse({ ok: true, data: handleAdminUpdateKey_(payload) });
       return jsonResponse({ ok: false, error: 'Admin action tidak dikenal: ' + action });
     }
@@ -835,6 +839,52 @@ function verifyAdminKey_(inputKey) {
   }
 }
 
+function getDefaultPricing_() {
+  return {
+    promo_banner: '',
+    tiers: {
+      sederhana: { price: 25000, promo_price: 0, promo_label: '' },
+      medium: { price: 35000, promo_price: 0, promo_label: '' },
+      rich: { price: 50000, promo_price: 0, promo_label: '' },
+    },
+  };
+}
+
+function handlePublicPricing_() {
+  const raw = PropertiesService.getScriptProperties().getProperty('NIKAHPLAN_PRICING_JSON');
+  if (!raw) return getDefaultPricing_();
+  try {
+    return Object.assign(getDefaultPricing_(), JSON.parse(raw));
+  } catch (e) {
+    return getDefaultPricing_();
+  }
+}
+
+function handleAdminSavePricing_(payload) {
+  const pricing = {
+    promo_banner: String(payload.promo_banner || '').trim(),
+    tiers: {
+      sederhana: {
+        price: Math.max(0, Number(payload.sederhana_price || 25000)),
+        promo_price: Math.max(0, Number(payload.sederhana_promo || 0)),
+        promo_label: String(payload.sederhana_label || '').trim(),
+      },
+      medium: {
+        price: Math.max(0, Number(payload.medium_price || 35000)),
+        promo_price: Math.max(0, Number(payload.medium_promo || 0)),
+        promo_label: String(payload.medium_label || '').trim(),
+      },
+      rich: {
+        price: Math.max(0, Number(payload.rich_price || 50000)),
+        promo_price: Math.max(0, Number(payload.rich_promo || 0)),
+        promo_label: String(payload.rich_label || '').trim(),
+      },
+    },
+  };
+  PropertiesService.getScriptProperties().setProperty('NIKAHPLAN_PRICING_JSON', JSON.stringify(pricing));
+  return { pricing };
+}
+
 function handleAdminDashboard_() {
   const users = readRows_('users').map((u) => {
     const clean = stripMeta_(u);
@@ -844,7 +894,8 @@ function handleAdminDashboard_() {
   });
   const licenses = readRows_('licenses').map(stripMeta_).reverse();
   const payments = readRows_('payments').map(stripMeta_).reverse();
-  return { users, licenses, payments };
+  const pricing = handlePublicPricing_();
+  return { users, licenses, payments, pricing };
 }
 
 function handleAdminGenerateCodes_(payload) {
@@ -937,6 +988,40 @@ function handleAdminDeleteUser_(payload) {
 
     ss.getSheetByName('users').deleteRow(user._rowIndex);
     return { deleted: true, email: user.email, partner_email: user.partner_email || '' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleAdminDeleteLicense_(payload) {
+  const code = String(payload.code || '').trim().toUpperCase();
+  if (!code) throw new Error('Kode tidak valid.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const rows = readRows_('licenses');
+    const target = rows.find((r) => String(r.code || '').trim().toUpperCase() === code);
+    if (!target) throw new Error('Kode tidak ditemukan.');
+    if (String(target.status || '').toLowerCase() === 'used') {
+      throw new Error('Kode yang sudah dipakai tidak dapat dihapus.');
+    }
+    SpreadsheetApp.getActiveSpreadsheet().getSheetByName('licenses').deleteRow(target._rowIndex);
+    return { deleted: true, code };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleAdminDeleteUnusedLicenses_() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('licenses');
+    const rows = readRows_('licenses').filter((r) => String(r.status || '').toLowerCase() === 'unused');
+    for (let i = rows.length - 1; i >= 0; i--) {
+      sheet.deleteRow(rows[i]._rowIndex);
+    }
+    return { deleted: rows.length };
   } finally {
     lock.releaseLock();
   }

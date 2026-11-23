@@ -208,6 +208,36 @@ h1, h2, h3, .brand-title {
   line-height: 1;
 }
 
+.price-original {
+  font-size: 0.95rem;
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.price-promo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.promo-banner {
+  background: #fbe9ec;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-weight: 700;
+  color: var(--primary);
+  text-align: center;
+}
+
+[data-theme="dark"] .promo-banner {
+  background: #3d2529;
+  color: #f5b3bc;
+}
+
 .howto-list {
   padding-left: 20px;
   display: flex;

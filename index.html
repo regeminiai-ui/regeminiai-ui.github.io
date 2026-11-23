@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
-  <link rel="stylesheet" href="styles.css?v=32" />
+  <link rel="stylesheet" href="styles.css?v=33" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -97,172 +97,132 @@
         </ol>
       </div>
 
-      <div class="pricing-grid">
-        <article class="card pricing-card">
-          <div class="plan-card-head">
-            <h3>Sederhana</h3>
-            <span class="badge badge-neutral">6 Bulan</span>
-          </div>
-          <div class="price-tag">Rp 25,000</div>
-          <ul class="plan-preview-list">
-            <li><span>1 Email Login</span><strong>✓</strong></li>
-            <li><span>Rekomendasi Plan KUA &amp; Sederhana</span><strong>✓</strong></li>
-            <li><span>Anggaran, Tamu (maks 100), Checklist</span><strong>✓</strong></li>
-            <li><span>Backup JSON</span><strong>✓</strong></li>
-          </ul>
-          <div class="plan-card-footer">
-            <a class="btn btn-outline btn-full" target="_blank" rel="noopener" href="https://wa.me/6289509901360?text=Halo%20Admin%20Ahmad%20Husain%2C%20saya%20mau%20beli%20Paket%20Sederhana%20(Rp%2025.000)%20My%20Weeding%20Plan">Beli via WhatsApp</a>
-          </div>
-        </article>
-
-        <article class="card pricing-card featured">
-          <div class="plan-card-head">
-            <h3>Medium</h3>
-            <span class="badge badge-warn">6 Bulan</span>
-          </div>
-          <div class="price-tag">Rp 35,000</div>
-          <ul class="plan-preview-list">
-            <li><span>Kolaborasi 2 Email Pasangan</span><strong>✓</strong></li>
-            <li><span>Semua 8 Plan (incl. Adat Jawa/Sunda/dll)</span><strong>✓</strong></li>
-            <li><span>Vendor, Rundown &amp; Fitur Cicilan</span><strong>✓</strong></li>
-            <li><span>Upload Bukti Drive + Menu Asset</span><strong>✓</strong></li>
-            <li><span>QR Buku Tamu Umum &amp; Mode Gelap</span><strong>✓</strong></li>
-          </ul>
-          <div class="plan-card-footer">
-            <a class="btn btn-primary btn-full" target="_blank" rel="noopener" href="https://wa.me/6289509901360?text=Halo%20Admin%20Ahmad%20Husain%2C%20saya%20mau%20beli%20Paket%20Medium%20(Rp%2035.000)%20My%20Weeding%20Plan">Beli via WhatsApp</a>
-          </div>
-        </article>
-
-        <article class="card pricing-card">
-          <div class="plan-card-head">
-            <h3>Rich</h3>
-            <span class="badge badge-ok">12 + 1 Bln Bonus</span>
-          </div>
-          <div class="price-tag">Rp 50,000</div>
-          <ul class="plan-preview-list">
-            <li><span>Semua Fitur Paket Medium</span><strong>✓</strong></li>
-            <li><span>Link Scan QR Pribadi per Tamu</span><strong>✓</strong></li>
-            <li><span>Custom Folder Google Drive Sendiri</span><strong>✓</strong></li>
-            <li><span>Riwayat Aktivitas (Audit Trail)</span><strong>✓</strong></li>
-            <li><span>Bebas Watermark di Halaman Tamu</span><strong>✓</strong></li>
-          </ul>
-          <div class="plan-card-footer">
-            <a class="btn btn-primary btn-full" target="_blank" rel="noopener" href="https://wa.me/6289509901360?text=Halo%20Admin%20Ahmad%20Husain%2C%20saya%20mau%20beli%20Paket%20Rich%20(Rp%2050.000)%20My%20Weeding%20Plan">Beli via WhatsApp</a>
-          </div>
-        </article>
-      </div>
+      <div id="pricing-promo-banner" class="promo-banner hidden"></div>
+      <div id="pricing-grid" class="pricing-grid"></div>
     </div>
   </section>
 
   <!-- ADMIN PANEL VIEW -->
-  <section id="admin-view" class="main-content hidden" style="margin:0 auto;max-width:1280px">
-    <header class="topbar">
-      <div>
-        <h2>Panel Admin — My Weeding Plan</h2>
-        <p class="muted">Kelola user, status (active / non-active / in-active), konfirmasi pembayaran & generate kode lisensi.</p>
-      </div>
-      <div class="topbar-actions btn-row">
-        <button type="button" id="btn-admin-refresh" class="btn btn-outline">Refresh</button>
-        <button type="button" id="btn-admin-exit" class="btn btn-ghost">Kembali ke Login</button>
-      </div>
-    </header>
-
-    <div id="admin-login-box" class="card form-stack" style="max-width:420px;margin:24px auto">
-      <h3>Masuk Admin</h3>
-      <form id="admin-auth-form" class="form-stack">
-        <div class="field">
-          <label for="admin-key-input">Admin Key</label>
-          <input id="admin-key-input" type="password" required placeholder="Masukkan Admin Key" />
+  <section id="admin-view" class="hidden">
+    <div id="admin-login-box" class="auth-wrapper">
+      <div class="auth-card">
+        <div class="auth-brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.7-9.2-9C1.5 8.1 3.7 4.8 7 4.8c1.9 0 3.6 1 5 2.7 1.4-1.7 3.1-2.7 5-2.7 3.3 0 5.5 3.3 4.2 6.7-1.7 4.3-9.2 9-9.2 9z"/></svg>
+          </span>
+          <h1>Admin Panel</h1>
+          <p>My Weeding Plan — Kelola User, Lisensi &amp; Promo</p>
         </div>
-        <button type="submit" class="btn btn-primary btn-full">Buka Panel Admin</button>
-      </form>
+        <form id="admin-auth-form" class="auth-form">
+          <div class="field">
+            <label for="admin-key-input">Admin Key</label>
+            <input id="admin-key-input" type="password" required placeholder="Masukkan Admin Key" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Buka Panel Admin</button>
+          <button type="button" id="btn-admin-back" class="btn btn-ghost btn-full">Kembali ke Login User</button>
+        </form>
+      </div>
     </div>
 
-    <div id="admin-content" class="hidden">
-      <div class="grid-2" style="margin-bottom:20px">
-        <form id="admin-payment-form" class="card form-stack">
-          <h3>Konfirmasi Pembayaran & Buat Kode</h3>
-          <div class="field">
-            <label for="adm-pay-email">Email Pembeli</label>
-            <input id="adm-pay-email" type="email" required placeholder="pembeli@gmail.com" />
+    <div id="admin-content" class="app-layout hidden">
+      <div id="admin-sidebar-backdrop" class="sidebar-backdrop hidden"></div>
+      <aside id="admin-sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <span class="brand-mark" aria-hidden="true">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.7-9.2-9C1.5 8.1 3.7 4.8 7 4.8c1.9 0 3.6 1 5 2.7 1.4-1.7 3.1-2.7 5-2.7 3.3 0 5.5 3.3 4.2 6.7-1.7 4.3-9.2 9-9.2 9z"/></svg>
+          </span>
+          <div class="sidebar-brand-text">
+            <div class="brand-title">Admin Panel</div>
+            <div class="brand-sub">My Weeding Plan</div>
           </div>
-          <div class="field">
-            <label for="adm-pay-tier">Paket</label>
-            <select id="adm-pay-tier">
-              <option value="sederhana">Sederhana (6 Bulan)</option>
-              <option value="medium" selected>Medium (6 Bulan)</option>
-              <option value="rich">Rich (12 + 1 Bulan)</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="adm-pay-amount">Nominal Bayar (Rp)</label>
-            <input id="adm-pay-amount" type="text" inputmode="numeric" placeholder="Contoh: 150,000" />
-          </div>
-          <div class="field">
-            <label for="adm-pay-method">Metode / Catatan</label>
-            <input id="adm-pay-method" type="text" value="Transfer / QRIS" />
-          </div>
-          <button type="submit" class="btn btn-primary">Konfirmasi & Generate 1 Kode</button>
-          <div id="adm-pay-result" class="mode-banner hidden"></div>
-        </form>
+          <button type="button" id="btn-admin-menu-close" class="icon-btn mobile-only" aria-label="Tutup Menu">&times;</button>
+        </div>
 
-        <div class="card form-stack">
-          <form id="admin-gen-form" class="form-stack">
-            <h3>Generate Stok Kode Lisensi</h3>
-            <div class="field">
-              <label for="adm-gen-tier">Paket</label>
-              <select id="adm-gen-tier">
-                <option value="sederhana">Sederhana (6 Bulan)</option>
-                <option value="medium" selected>Medium (6 Bulan)</option>
-                <option value="rich">Rich (12 + 1 Bulan)</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="adm-gen-count">Jumlah Kode (1–50)</label>
-              <input id="adm-gen-count" type="number" min="1" max="50" value="5" />
-            </div>
-            <button type="submit" class="btn btn-outline">Generate Kode</button>
-          </form>
-          <div id="adm-gen-result" class="mode-banner hidden"></div>
+        <nav class="nav-list" aria-label="Menu Admin">
+          <button type="button" class="nav-item admin-nav-item active" data-admin-tab="users">
+            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M3 19.5c.4-3.2 2.8-5 6-5s5.6 1.8 6 5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17.5 14c2.2.2 3.8 1.5 4 4"/></svg>
+            <span>Manajemen User</span>
+          </button>
+          <button type="button" class="nav-item admin-nav-item" data-admin-tab="licenses">
+            <svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 12h6M16 12h1"/></svg>
+            <span>Kode Lisensi</span>
+          </button>
+          <button type="button" class="nav-item admin-nav-item" data-admin-tab="payments">
+            <svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12.5h5"/></svg>
+            <span>Konfirmasi Bayar</span>
+          </button>
+          <button type="button" class="nav-item admin-nav-item" data-admin-tab="settings">
+            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+            <span>Harga &amp; Promo</span>
+          </button>
+        </nav>
 
-          <form id="admin-key-form" class="form-stack" style="margin-top:8px;padding-top:12px;border-top:1.5px dashed var(--border-soft)">
-            <div class="field">
-              <label for="adm-new-key">Ganti Admin Key</label>
-              <div class="btn-row">
-                <input id="adm-new-key" type="password" minlength="6" placeholder="Admin Key baru (min 6 char)" style="flex:1" />
-                <button type="submit" class="btn btn-outline btn-sm">Ubah Key</button>
+        <div class="sidebar-footer">
+          <button type="button" id="btn-admin-exit" class="btn btn-ghost btn-full">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M15 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/></svg>
+            <span>Keluar Admin</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button type="button" id="btn-admin-menu-toggle" class="menu-toggle mobile-only" aria-label="Buka Menu Admin">
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            </button>
+            <div>
+              <h2 id="admin-page-title">Manajemen User</h2>
+              <p class="muted">Kelola user, status, kode lisensi, pembayaran &amp; promo harga.</p>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <button type="button" id="btn-admin-refresh" class="btn btn-outline">Refresh</button>
+          </div>
+        </header>
+
+        <!-- ADMIN TAB: USERS -->
+        <section id="admin-tab-users" class="admin-tab-panel">
+          <div class="table-wrap card">
+            <table>
+              <thead>
+                <tr>
+                  <th>Pasangan</th>
+                  <th>Email Utama</th>
+                  <th>Email Pasangan</th>
+                  <th>Kode Lisensi</th>
+                  <th>Paket</th>
+                  <th>Status</th>
+                  <th>Masa Aktif</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-admin-users"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ADMIN TAB: LICENSES -->
+        <section id="admin-tab-licenses" class="admin-tab-panel hidden">
+          <div class="card form-stack" style="margin-bottom:16px">
+            <form id="admin-gen-form" class="panel-toolbar" style="margin-bottom:0">
+              <div class="filters">
+                <select id="adm-gen-tier">
+                  <option value="sederhana">Sederhana (6 Bulan)</option>
+                  <option value="medium" selected>Medium (6 Bulan)</option>
+                  <option value="rich">Rich (12 + 1 Bulan)</option>
+                </select>
+                <input id="adm-gen-count" type="number" min="1" max="50" value="5" style="width:110px" />
               </div>
-            </div>
-          </form>
-        </div>
-      </div>
+              <div class="btn-row">
+                <button type="submit" class="btn btn-primary">+ Generate Kode</button>
+                <button type="button" id="btn-admin-del-unused" class="btn btn-danger">Hapus Semua Unused</button>
+              </div>
+            </form>
+            <div id="adm-gen-result" class="mode-banner hidden"></div>
+          </div>
 
-      <div class="card" style="margin-bottom:20px">
-        <div class="card-header">
-          <h3>Manajemen User & Pasangan</h3>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Pasangan</th>
-                <th>Email Utama</th>
-                <th>Email Pasangan</th>
-                <th>Paket</th>
-                <th>Status</th>
-                <th>Masa Aktif</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="tbody-admin-users"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-header"><h3>Kode Lisensi</h3></div>
-          <div class="table-wrap">
+          <div class="table-wrap card">
             <table>
               <thead>
                 <tr>
@@ -276,26 +236,108 @@
               <tbody id="tbody-admin-licenses"></tbody>
             </table>
           </div>
-        </div>
+        </section>
 
-        <div class="card">
-          <div class="card-header"><h3>Riwayat Konfirmasi Pembayaran</h3></div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Pembeli</th>
-                  <th>Paket</th>
-                  <th>Nominal</th>
-                  <th>Kode</th>
-                  <th>Tanggal</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-admin-payments"></tbody>
-            </table>
+        <!-- ADMIN TAB: PAYMENTS -->
+        <section id="admin-tab-payments" class="admin-tab-panel hidden">
+          <div class="grid-2">
+            <form id="admin-payment-form" class="card form-stack">
+              <h3>Konfirmasi Pembayaran &amp; Buat Kode</h3>
+              <div class="field">
+                <label for="adm-pay-email">Email Pembeli</label>
+                <input id="adm-pay-email" type="email" required placeholder="pembeli@gmail.com" />
+              </div>
+              <div class="field">
+                <label for="adm-pay-tier">Paket</label>
+                <select id="adm-pay-tier">
+                  <option value="sederhana">Sederhana (6 Bulan)</option>
+                  <option value="medium" selected>Medium (6 Bulan)</option>
+                  <option value="rich">Rich (12 + 1 Bulan)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="adm-pay-amount">Nominal Bayar (Rp)</label>
+                <input id="adm-pay-amount" type="text" inputmode="numeric" placeholder="Contoh: 35,000" />
+              </div>
+              <div class="field">
+                <label for="adm-pay-method">Metode / Catatan</label>
+                <input id="adm-pay-method" type="text" value="Transfer / QRIS" />
+              </div>
+              <button type="submit" class="btn btn-primary">Konfirmasi &amp; Generate 1 Kode</button>
+              <div id="adm-pay-result" class="mode-banner hidden"></div>
+            </form>
+
+            <div class="card">
+              <div class="card-header"><h3>Riwayat Konfirmasi Pembayaran</h3></div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Pembeli</th>
+                      <th>Paket</th>
+                      <th>Nominal</th>
+                      <th>Kode</th>
+                      <th>Tanggal</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-admin-payments"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </section>
+
+        <!-- ADMIN TAB: SETTINGS & PRICING -->
+        <section id="admin-tab-settings" class="admin-tab-panel hidden">
+          <div class="grid-2">
+            <form id="admin-pricing-form" class="card form-stack">
+              <h3>Atur Harga &amp; Promo Pricelist</h3>
+              <div class="field">
+                <label for="adm-promo-banner">Banner Promo (Opsional)</label>
+                <input id="adm-promo-banner" type="text" placeholder="Contoh: PROMO SPESIAL BULAN INI — Diskon hingga 30%!" />
+              </div>
+
+              <div class="installment-box form-stack">
+                <strong>Paket Sederhana (6 Bulan)</strong>
+                <div class="btn-row">
+                  <div class="field" style="flex:1"><label>Harga Normal (Rp)</label><input id="adm-price-sed" type="text" inputmode="numeric" /></div>
+                  <div class="field" style="flex:1"><label>Harga Promo (0 = Normal)</label><input id="adm-promo-sed" type="text" inputmode="numeric" /></div>
+                </div>
+                <div class="field"><label>Label Diskon (Opsional)</label><input id="adm-label-sed" type="text" placeholder="Contoh: HEMAT 20%" /></div>
+              </div>
+
+              <div class="installment-box form-stack">
+                <strong>Paket Medium (6 Bulan)</strong>
+                <div class="btn-row">
+                  <div class="field" style="flex:1"><label>Harga Normal (Rp)</label><input id="adm-price-med" type="text" inputmode="numeric" /></div>
+                  <div class="field" style="flex:1"><label>Harga Promo (0 = Normal)</label><input id="adm-promo-med" type="text" inputmode="numeric" /></div>
+                </div>
+                <div class="field"><label>Label Diskon (Opsional)</label><input id="adm-label-med" type="text" placeholder="Contoh: BEST SELLER" /></div>
+              </div>
+
+              <div class="installment-box form-stack">
+                <strong>Paket Rich (12 + 1 Bulan Bonus)</strong>
+                <div class="btn-row">
+                  <div class="field" style="flex:1"><label>Harga Normal (Rp)</label><input id="adm-price-rch" type="text" inputmode="numeric" /></div>
+                  <div class="field" style="flex:1"><label>Harga Promo (0 = Normal)</label><input id="adm-promo-rch" type="text" inputmode="numeric" /></div>
+                </div>
+                <div class="field"><label>Label Diskon (Opsional)</label><input id="adm-label-rch" type="text" placeholder="Contoh: DISKON 25%" /></div>
+              </div>
+
+              <button type="submit" class="btn btn-primary">Simpan Harga &amp; Promo</button>
+            </form>
+
+            <form id="admin-key-form" class="card form-stack" style="align-self:start">
+              <h3>Keamanan Admin</h3>
+              <div class="field">
+                <label for="adm-new-key">Ganti Admin Key</label>
+                <input id="adm-new-key" type="password" minlength="6" placeholder="Admin Key baru (minimal 6 karakter)" />
+              </div>
+              <button type="submit" class="btn btn-outline">Ubah Admin Key</button>
+            </form>
+          </div>
+        </section>
+      </main>
     </div>
   </section>
 
@@ -829,6 +871,6 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="app.js?v=32"></script>
+  <script src="app.js?v=33"></script>
 </body>
 </html>

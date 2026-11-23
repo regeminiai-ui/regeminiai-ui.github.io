@@ -387,6 +387,10 @@ function demoApiCall(action, payload) {
     return { guest: db.guests[idx] };
   }
 
+  if (action === 'publicPricing') {
+    return { pricing: db.pricing || getDefaultPricing() };
+  }
+
   if (action && action.startsWith('admin')) {
     const demoKey = localStorage.getItem('nikahplan_demo_admin_key');
     if (!demoKey || payload.admin_key !== demoKey) {
@@ -395,7 +399,31 @@ function demoApiCall(action, payload) {
     db.licenses = db.licenses || [];
     db.payments = db.payments || [];
     if (action === 'adminDashboard') {
-      return { users: db.users, licenses: [...db.licenses].reverse(), payments: [...db.payments].reverse() };
+      return {
+        users: db.users,
+        licenses: [...db.licenses].reverse(),
+        payments: [...db.payments].reverse(),
+        pricing: db.pricing || getDefaultPricing(),
+      };
+    }
+    if (action === 'adminDeleteLicense') {
+      const idx = db.licenses.findIndex((x) => x.code === payload.code);
+      if (idx === -1) throw new Error('Kode tidak ditemukan.');
+      if (db.licenses[idx].status !== 'unused') throw new Error('Hanya kode unused yang bisa dihapus.');
+      db.licenses.splice(idx, 1);
+      saveDemoDb(db);
+      return { deleted: true };
+    }
+    if (action === 'adminDeleteUnusedLicenses') {
+      const before = db.licenses.length;
+      db.licenses = db.licenses.filter((x) => x.status !== 'unused');
+      saveDemoDb(db);
+      return { deleted: before - db.licenses.length };
+    }
+    if (action === 'adminSavePricing') {
+      db.pricing = payload.pricing || getDefaultPricing();
+      saveDemoDb(db);
+      return { pricing: db.pricing };
     }
     if (action === 'adminGenerateCodes') {
       const daysMap = { sederhana: 180, medium: 180, rich: 395 };
@@ -604,6 +632,119 @@ function updateModeBanner() {
   }
 }
 
+function getDefaultPricing() {
+  return {
+    promo_banner: '',
+    sederhana: { price: 79000, promo_price: 0, promo_label: '' },
+    medium: { price: 149000, promo_price: 0, promo_label: '' },
+    rich: { price: 249000, promo_price: 0, promo_label: '' },
+  };
+}
+
+function formatPriceRp(n) {
+  return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+}
+
+function renderPricingShowcase(pricingData) {
+  const p = { ...getDefaultPricing(), ...(pricingData || {}) };
+  const bannerEl = $('pricing-promo-banner');
+  if (bannerEl) {
+    if (p.promo_banner && p.promo_banner.trim()) {
+      bannerEl.textContent = p.promo_banner.trim();
+      bannerEl.classList.remove('hidden');
+    } else {
+      bannerEl.textContent = '';
+      bannerEl.classList.add('hidden');
+    }
+  }
+
+  const gridEl = $('pricing-grid');
+  if (!gridEl) return;
+
+  const tiers = [
+    {
+      key: 'sederhana',
+      name: 'Sederhana',
+      duration: '6 Bulan',
+      featured: false,
+      defaultBadge: '',
+      features: [
+        '1 Akun (Single)',
+        'Overview & Countdown',
+        'Rencana Anggaran (Budget)',
+        'Vendor & Kontrak',
+        'Checklist Tugas',
+        'Export CSV',
+      ],
+    },
+    {
+      key: 'medium',
+      name: 'Medium',
+      duration: '6 Bulan',
+      featured: false,
+      defaultBadge: '',
+      features: [
+        '2 Akun (Pasangan Sync)',
+        'Semua Fitur Sederhana',
+        'Daftar Tamu & RSVP',
+        'Rundown Acara',
+        'Export CSV',
+      ],
+    },
+    {
+      key: 'rich',
+      name: 'Rich',
+      duration: '13 Bulan',
+      featured: true,
+      defaultBadge: 'Paling Lengkap',
+      features: [
+        '2 Akun (Pasangan Sync)',
+        'Semua Fitur Medium',
+        'Self Check-In Tamu (QR Umum)',
+        'Link QR & Undangan Personal Tamu',
+        'Google Drive Galeri & Dokumen',
+        'Export PDF Laporan Lengkap',
+      ],
+    },
+  ];
+
+  gridEl.innerHTML = tiers.map((t) => {
+    const cfg = p[t.key] || { price: 0, promo_price: 0, promo_label: '' };
+    const normalPrice = Number(cfg.price || 0);
+    const promoPrice = Number(cfg.promo_price || 0);
+    const hasPromo = promoPrice > 0 && promoPrice < normalPrice;
+    const effectivePrice = hasPromo ? promoPrice : normalPrice;
+    const badgeText = (cfg.promo_label || '').trim() || t.defaultBadge;
+
+    const priceHtml = hasPromo
+      ? `<div class="price-promo-row"><span class="price-original">${formatPriceRp(normalPrice)}</span></div><div class="price-tag">${formatPriceRp(promoPrice)} <span>/ ${t.duration}</span></div>`
+      : `<div class="price-tag">${formatPriceRp(normalPrice)} <span>/ ${t.duration}</span></div>`;
+
+    const waMsg = encodeURIComponent(`Halo Admin Ahmad Husain, saya mau beli paket ${t.name} My Weeding Plan (${formatPriceRp(effectivePrice)}).`);
+    const waUrl = `https://wa.me/6289509901360?text=${waMsg}`;
+
+    return `
+      <div class="price-card${t.featured ? ' price-card-featured' : ''}">
+        ${badgeText ? `<span class="price-badge">${escapeHtml(badgeText)}</span>` : ''}
+        <h4>${escapeHtml(t.name)}</h4>
+        ${priceHtml}
+        <ul>${t.features.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
+        <a class="btn ${t.featured ? 'btn-primary' : 'btn-outline'} btn-full" href="${waUrl}" target="_blank" rel="noopener">Beli via WhatsApp (Admin: Ahmad Husain)</a>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadPublicPricing() {
+  renderPricingShowcase(getDefaultPricing());
+  try {
+    const res = await apiCall('publicPricing', {});
+    if (res && res.pricing) renderPricingShowcase(res.pricing);
+  } catch (e) {
+    // Keep default pricing silently if offline or backend not yet updated
+  }
+}
+
 function renderAuthOrApp() {
   updateModeBanner();
   if (state.token && state.user) {
@@ -614,6 +755,7 @@ function renderAuthOrApp() {
   } else {
     $('app-view').classList.add('hidden');
     $('auth-view').classList.remove('hidden');
+    loadPublicPricing();
   }
 }
 
@@ -2142,7 +2284,33 @@ async function loadAdminDashboard() {
   }
 }
 
-function renderAdminTables({ users = [], licenses = [], payments = [] }) {
+function adminSetSidebarOpen(isOpen) {
+  const sidebar = $('admin-sidebar');
+  const backdrop = $('admin-sidebar-backdrop');
+  if (!sidebar) return;
+  sidebar.classList.toggle('sidebar-open', Boolean(isOpen));
+  if (backdrop) backdrop.classList.toggle('hidden', !isOpen);
+}
+
+function switchAdminTab(tabName) {
+  const titles = {
+    users: 'Manajemen User',
+    licenses: 'Kode Lisensi',
+    payments: 'Konfirmasi Bayar',
+    settings: 'Harga & Promo',
+  };
+  document.querySelectorAll('.admin-nav-item').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.adminTab === tabName);
+  });
+  ['users', 'licenses', 'payments', 'settings'].forEach((t) => {
+    $(`admin-tab-${t}`)?.classList.toggle('hidden', t !== tabName);
+  });
+  if ($('admin-page-title')) {
+    $('admin-page-title').textContent = titles[tabName] || 'Panel Admin';
+  }
+}
+
+function renderAdminTables({ users = [], licenses = [], payments = [], pricing = null }) {
   $('tbody-admin-users').innerHTML = users.length
     ? users.map((u) => {
         const st = String(u.status || 'active').toLowerCase();
@@ -2153,6 +2321,7 @@ function renderAdminTables({ users = [], licenses = [], payments = [] }) {
             <td data-label="Email Utama">${escapeHtml(u.email)}</td>
             <td data-label="Email Pasangan">${escapeHtml(u.partner_email || '-')}</td>
             <td data-label="Paket"><span class="badge badge-neutral">${escapeHtml((u.tier || 'rich').toUpperCase())}</span></td>
+            <td data-label="Kode Lisensi"><code>${escapeHtml(u.license_code || '-')}</code></td>
             <td data-label="Status"><span class="badge ${badgeCls}">${escapeHtml(st)}</span></td>
             <td data-label="Masa Aktif">${escapeHtml(u.expires_at ? formatDateId(u.expires_at) : 'Tanpa Batas')}</td>
             <td data-label="Aksi" class="td-actions">
@@ -2165,18 +2334,36 @@ function renderAdminTables({ users = [], licenses = [], payments = [] }) {
             </td>
           </tr>`;
       }).join('')
-    : '<tr class="empty-row"><td colspan="7" class="muted">Belum ada user terdaftar.</td></tr>';
+    : '<tr class="empty-row"><td colspan="8" class="muted">Belum ada user terdaftar.</td></tr>';
 
   $('tbody-admin-licenses').innerHTML = licenses.length
-    ? licenses.slice(0, 50).map((l) => `
+    ? licenses.slice(0, 100).map((l) => `
       <tr>
         <td data-label="Kode"><code>${escapeHtml(l.code)}</code></td>
         <td data-label="Paket">${escapeHtml(String(l.tier || '').toUpperCase())}</td>
         <td data-label="Status"><span class="badge ${l.status === 'unused' ? 'badge-ok' : 'badge-neutral'}">${escapeHtml(l.status)}</span></td>
         <td data-label="Dipakai Oleh">${escapeHtml(l.used_by_email || '-')}</td>
-        <td data-label="Aksi" class="td-actions"><button type="button" class="btn btn-sm btn-outline" onclick="copyCheckinUrl('${escapeHtml(l.code)}')">Salin</button></td>
+        <td data-label="Aksi" class="td-actions">
+          <div class="action-btns">
+            <button type="button" class="btn btn-sm btn-outline" onclick="copyCheckinUrl('${escapeHtml(l.code)}')">Salin</button>
+            ${l.status === 'unused' ? `<button type="button" class="btn btn-sm btn-danger" onclick="adminDeleteCode('${escapeHtml(l.code)}')">Hapus</button>` : ''}
+          </div>
+        </td>
       </tr>`).join('')
     : '<tr class="empty-row"><td colspan="5" class="muted">Belum ada kode lisensi.</td></tr>';
+
+  const p = { ...getDefaultPricing(), ...(pricing || {}) };
+  if ($('adm-promo-banner')) $('adm-promo-banner').value = p.promo_banner || '';
+  const fmtOpt = (n) => (Number(n) > 0 ? Number(n).toLocaleString('en-US') : '');
+  if ($('adm-price-sed')) $('adm-price-sed').value = fmtOpt(p.sederhana?.price);
+  if ($('adm-promo-sed')) $('adm-promo-sed').value = fmtOpt(p.sederhana?.promo_price);
+  if ($('adm-label-sed')) $('adm-label-sed').value = p.sederhana?.promo_label || '';
+  if ($('adm-price-med')) $('adm-price-med').value = fmtOpt(p.medium?.price);
+  if ($('adm-promo-med')) $('adm-promo-med').value = fmtOpt(p.medium?.promo_price);
+  if ($('adm-label-med')) $('adm-label-med').value = p.medium?.promo_label || '';
+  if ($('adm-price-rch')) $('adm-price-rch').value = fmtOpt(p.rich?.price);
+  if ($('adm-promo-rch')) $('adm-promo-rch').value = fmtOpt(p.rich?.promo_price);
+  if ($('adm-label-rch')) $('adm-label-rch').value = p.rich?.promo_label || '';
 
   $('tbody-admin-payments').innerHTML = payments.length
     ? payments.slice(0, 50).map((p) => `
@@ -2226,9 +2413,96 @@ window.adminRemoveUser = (userId, email, partnerEmail) => {
   });
 };
 
+window.adminDeleteCode = (code) => {
+  openConfirmModal({
+    title: 'Hapus Kode Lisensi',
+    message: `Hapus kode unused "${code}"?`,
+    confirmText: 'Ya, Hapus',
+    isDanger: true,
+    onConfirm: async () => {
+      try {
+        await apiCall('adminDeleteLicense', { admin_key: adminKeySession, code });
+        showToast(`Kode ${code} dihapus.`);
+        await loadAdminDashboard();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    },
+  });
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   $('btn-admin-exit')?.addEventListener('click', exitAdminView);
+  $('btn-admin-back')?.addEventListener('click', exitAdminView);
   $('btn-admin-refresh')?.addEventListener('click', loadAdminDashboard);
+
+  $('btn-admin-menu-toggle')?.addEventListener('click', () => adminSetSidebarOpen(true));
+  $('btn-admin-menu-close')?.addEventListener('click', () => adminSetSidebarOpen(false));
+  $('admin-sidebar-backdrop')?.addEventListener('click', () => adminSetSidebarOpen(false));
+
+  document.querySelectorAll('.admin-nav-item').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      switchAdminTab(btn.dataset.adminTab);
+      adminSetSidebarOpen(false);
+    });
+  });
+
+  $('btn-admin-del-unused')?.addEventListener('click', () => {
+    openConfirmModal({
+      title: 'Hapus Semua Kode Unused',
+      message: 'Hapus seluruh kode lisensi yang belum terpakai (status unused)? Admin dapat generate ulang setelahnya.',
+      confirmText: 'Ya, Hapus Semua',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          const res = await apiCall('adminDeleteUnusedLicenses', { admin_key: adminKeySession });
+          showToast(`${res.deleted || 0} kode unused berhasil dihapus.`);
+          await loadAdminDashboard();
+        } catch (err) {
+          showToast(err.message, true);
+        }
+      },
+    });
+  });
+
+  ['adm-price-sed', 'adm-promo-sed', 'adm-price-med', 'adm-promo-med', 'adm-price-rch', 'adm-promo-rch'].forEach((id) => {
+    $(id)?.addEventListener('input', (e) => {
+      const digits = e.target.value.replace(/[^\d]/g, '');
+      e.target.value = digits ? Number(digits).toLocaleString('en-US') : '';
+    });
+  });
+
+  $('admin-pricing-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    withButtonLock(btn, 'Menyimpan...', async () => {
+      try {
+        const pricing = {
+          promo_banner: $('adm-promo-banner').value.trim(),
+          sederhana: {
+            price: parseCurrency($('adm-price-sed').value),
+            promo_price: parseCurrency($('adm-promo-sed').value),
+            promo_label: $('adm-label-sed').value.trim(),
+          },
+          medium: {
+            price: parseCurrency($('adm-price-med').value),
+            promo_price: parseCurrency($('adm-promo-med').value),
+            promo_label: $('adm-label-med').value.trim(),
+          },
+          rich: {
+            price: parseCurrency($('adm-price-rch').value),
+            promo_price: parseCurrency($('adm-promo-rch').value),
+            promo_label: $('adm-label-rch').value.trim(),
+          },
+        };
+        const res = await apiCall('adminSavePricing', { admin_key: adminKeySession, pricing });
+        if (res?.pricing) renderPricingShowcase(res.pricing);
+        showToast('Harga & promo berhasil disimpan!');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
+  });
 
   $('admin-auth-form')?.addEventListener('submit', (e) => {
     e.preventDefault();
