@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
-  <link rel="stylesheet" href="styles.css?v=29" />
+  <link rel="stylesheet" href="styles.css?v=30" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -47,7 +47,10 @@
       <!-- Register Form -->
       <form id="register-form" class="auth-form hidden">
         <div class="field">
-          <label for="reg-license">Kode Lisensi (Wajib)</label>
+          <div class="field-label-row">
+            <label for="reg-license">Kode Lisensi (Wajib)</label>
+            <button type="button" id="btn-get-kode" class="link-btn mobile-only-tablet">Get Kode</button>
+          </div>
           <input id="reg-license" type="text" required placeholder="Contoh: MWP-MED-XXXXXX" />
         </div>
         <div class="field">
@@ -823,6 +826,6 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="app.js?v=29"></script>
+  <script src="app.js?v=30"></script>
 </body>
 </html>

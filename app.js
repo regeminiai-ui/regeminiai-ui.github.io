@@ -1664,6 +1664,9 @@ document.addEventListener('DOMContentLoaded', () => {
   $('modal-close').addEventListener('click', closeModal);
   $('modal-cancel').addEventListener('click', closeModal);
   $('btn-open-api-config')?.addEventListener('click', openApiConfigModal);
+  $('btn-get-kode')?.addEventListener('click', () => {
+    $('pricing-showcase')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   $('btn-show-qr').addEventListener('click', openGuestQrModal);
 
   $('modal-form').addEventListener('submit', (e) => {
