@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
-  <link rel="stylesheet" href="styles.css?v=12" />
+  <link rel="stylesheet" href="styles.css?v=13" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -34,11 +34,11 @@
       <!-- Login Form -->
       <form id="login-form" class="auth-form">
         <div class="field">
-          <label for="login-email">Email</label>
+          <label for="login-email">Email (Anda atau Pasangan)</label>
           <input id="login-email" type="email" required placeholder="nama@email.com" autocomplete="email" />
         </div>
         <div class="field">
-          <label for="login-password">Password</label>
+          <label for="login-password">Password Bersama</label>
           <input id="login-password" type="password" required placeholder="Minimal 6 karakter" autocomplete="current-password" />
         </div>
         <button type="submit" class="btn btn-primary btn-full">Masuk</button>
@@ -59,11 +59,15 @@
           <input id="reg-date" type="date" />
         </div>
         <div class="field">
-          <label for="reg-email">Email</label>
-          <input id="reg-email" type="email" required placeholder="nama@email.com" autocomplete="email" />
+          <label for="reg-email">Email Utama (Pria / Wanita)</label>
+          <input id="reg-email" type="email" required placeholder="email1@gmail.com" autocomplete="email" />
         </div>
         <div class="field">
-          <label for="reg-password">Password</label>
+          <label for="reg-partner-email">Email Pasangan — Kolaborasi (Opsional)</label>
+          <input id="reg-partner-email" type="email" placeholder="email2@gmail.com" />
+        </div>
+        <div class="field">
+          <label for="reg-password">Password Bersama</label>
           <input id="reg-password" type="password" minlength="6" required placeholder="Minimal 6 karakter" autocomplete="new-password" />
         </div>
         <button type="submit" class="btn btn-primary btn-full">Buat Akun</button>
@@ -439,6 +443,10 @@
               <input id="set-partner" type="text" required />
             </div>
             <div class="field">
+              <label for="set-partner-email">Email Pasangan (Kolaborasi)</label>
+              <input id="set-partner-email" type="email" placeholder="email-pasangan@gmail.com" />
+            </div>
+            <div class="field">
               <label for="set-date">Tanggal Pernikahan</label>
               <input id="set-date" type="date" />
             </div>
@@ -502,6 +510,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>

@@ -198,12 +198,17 @@ function demoApiCall(action, payload) {
 
   if (action === 'register') {
     const email = (payload.email || '').trim().toLowerCase();
-    if (db.users.some((u) => u.email === email)) {
+    const partnerEmail = (payload.partner_email || '').trim().toLowerCase();
+    if (db.users.some((u) => u.email === email || (u.partner_email && u.partner_email === email))) {
       throw new Error('Email sudah terdaftar.');
+    }
+    if (partnerEmail && (partnerEmail === email || db.users.some((u) => u.email === partnerEmail || u.partner_email === partnerEmail))) {
+      throw new Error('Email pasangan tidak valid atau sudah dipakai.');
     }
     const user = {
       id: uid(),
       email,
+      partner_email: partnerEmail,
       password: payload.password,
       name: payload.name,
       partner_name: payload.partner_name,
@@ -217,7 +222,7 @@ function demoApiCall(action, payload) {
 
   if (action === 'login') {
     const email = (payload.email || '').trim().toLowerCase();
-    const user = db.users.find((u) => u.email === email && u.password === payload.password);
+    const user = db.users.find((u) => (u.email === email || u.partner_email === email) && u.password === payload.password);
     if (!user) throw new Error('Email atau password salah.');
     const { password, ...safeUser } = user;
     return { token: 'demo_' + user.id, user: safeUser };
@@ -257,6 +262,7 @@ function demoApiCall(action, payload) {
   if (action === 'updateProfile') {
     currentUser.name = payload.name;
     currentUser.partner_name = payload.partner_name;
+    currentUser.partner_email = (payload.partner_email || '').trim().toLowerCase();
     currentUser.wedding_date = payload.wedding_date || '';
     saveDemoDb(db);
     const { password, ...safeUser } = currentUser;
@@ -399,6 +405,7 @@ function renderUserHeader() {
   $('sidebar-couple').textContent = `${u.name} & ${u.partner_name}`;
   $('set-name').value = u.name || '';
   $('set-partner').value = u.partner_name || '';
+  $('set-partner-email').value = u.partner_email || '';
   $('set-date').value = dateStr;
   $('set-api-url').value = state.apiUrl || '';
 
@@ -1097,6 +1104,7 @@ document.addEventListener('DOMContentLoaded', () => {
           partner_name: $('reg-partner').value,
           wedding_date: $('reg-date').value,
           email: $('reg-email').value,
+          partner_email: $('reg-partner-email').value,
           password: $('reg-password').value,
         });
         saveSession(res.token, res.user);
@@ -1251,6 +1259,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const res = await apiCall('updateProfile', {
             name: $('set-name').value,
             partner_name: $('set-partner').value,
+            partner_email: $('set-partner-email').value,
             wedding_date: $('set-date').value,
           });
           saveSession(state.token, res.user);

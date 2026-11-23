@@ -6,7 +6,7 @@
  */
 
 const SCHEMAS = {
-  users: ['id', 'email', 'name', 'partner_name', 'wedding_date', 'password_hash', 'salt', 'created_at'],
+  users: ['id', 'email', 'name', 'partner_name', 'wedding_date', 'password_hash', 'salt', 'created_at', 'partner_email'],
   budgets: ['id', 'user_id', 'category', 'item', 'estimated', 'actual', 'paid', 'status', 'notes', 'updated_at'],
   guests: ['id', 'user_id', 'name', 'side', 'group', 'pax', 'rsvp', 'phone', 'notes', 'updated_at'],
   vendors: ['id', 'user_id', 'category', 'name', 'pic', 'phone', 'price', 'dp_paid', 'status', 'notes', 'updated_at'],
@@ -69,6 +69,14 @@ function ensureSchema_() {
     } else if (sheet.getLastRow() === 0) {
       sheet.appendRow(SCHEMAS[name]);
       sheet.setFrozenRows(1);
+    } else {
+      const existingHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      SCHEMAS[name].forEach((col) => {
+        if (existingHeaders.indexOf(col) === -1) {
+          sheet.getRange(1, existingHeaders.length + 1).setValue(col);
+          existingHeaders.push(col);
+        }
+      });
     }
   });
 }
@@ -131,20 +139,33 @@ function stripMeta_(obj) {
   return copy;
 }
 
+function isEmailTaken_(users, email, excludeUserId) {
+  if (!email) return false;
+  return users.some((u) => {
+    if (excludeUserId && u.id === excludeUserId) return false;
+    return String(u.email || '').toLowerCase() === email ||
+      String(u.partner_email || '').toLowerCase() === email;
+  });
+}
+
 // --- Auth Handlers ---
 function handleRegister_(payload) {
   const email = String(payload.email || '').trim().toLowerCase();
+  const partnerEmail = String(payload.partner_email || '').trim().toLowerCase();
   const password = String(payload.password || '');
   if (!email || password.length < 6) {
     throw new Error('Email valid dan password minimal 6 karakter wajib diisi.');
+  }
+  if (partnerEmail && partnerEmail === email) {
+    throw new Error('Email pasangan harus berbeda dengan email utama.');
   }
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const users = readRows_('users');
-    if (users.some((u) => String(u.email).toLowerCase() === email)) {
-      throw new Error('Email sudah terdaftar.');
+    if (isEmailTaken_(users, email) || isEmailTaken_(users, partnerEmail)) {
+      throw new Error('Salah satu email sudah terdaftar.');
     }
 
     const id = 'u_' + Utilities.getUuid().slice(0, 8);
@@ -161,6 +182,7 @@ function handleRegister_(payload) {
       hash,
       salt,
       now,
+      partnerEmail,
     ];
 
     SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users').appendRow(row);
@@ -169,6 +191,7 @@ function handleRegister_(payload) {
       user: {
         id,
         email,
+        partner_email: partnerEmail,
         name: row[2],
         partner_name: row[3],
         wedding_date: row[4],
@@ -183,7 +206,10 @@ function handleLogin_(payload) {
   const email = String(payload.email || '').trim().toLowerCase();
   const password = String(payload.password || '');
   const users = readRows_('users');
-  const user = users.find((u) => String(u.email).toLowerCase() === email);
+  const user = users.find((u) =>
+    String(u.email || '').toLowerCase() === email ||
+    (u.partner_email && String(u.partner_email).toLowerCase() === email)
+  );
   if (!user) throw new Error('Email atau password salah.');
 
   const hash = sha256Hex_(user.salt + ':' + password);
@@ -194,6 +220,7 @@ function handleLogin_(payload) {
     user: {
       id: user.id,
       email: user.email,
+      partner_email: user.partner_email || '',
       name: user.name,
       partner_name: user.partner_name,
       wedding_date: user.wedding_date,
@@ -209,11 +236,20 @@ function handleUpdateProfile_(userId, payload) {
     const user = users.find((u) => u.id === userId);
     if (!user) throw new Error('User tidak ditemukan.');
 
+    const partnerEmail = String(payload.partner_email || '').trim().toLowerCase();
+    if (partnerEmail && partnerEmail === String(user.email || '').toLowerCase()) {
+      throw new Error('Email pasangan harus berbeda dengan email utama.');
+    }
+    if (isEmailTaken_(users, partnerEmail, userId)) {
+      throw new Error('Email pasangan sudah dipakai akun lain.');
+    }
+
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
     const headers = SCHEMAS.users;
     user.name = String(payload.name || '').trim();
     user.partner_name = String(payload.partner_name || '').trim();
     user.wedding_date = String(payload.wedding_date || '');
+    user.partner_email = partnerEmail;
 
     const rowValues = headers.map((h) => user[h] ?? '');
     sheet.getRange(user._rowIndex, 1, 1, headers.length).setValues([rowValues]);
@@ -222,6 +258,7 @@ function handleUpdateProfile_(userId, payload) {
       user: {
         id: user.id,
         email: user.email,
+        partner_email: user.partner_email,
         name: user.name,
         partner_name: user.partner_name,
         wedding_date: user.wedding_date,
