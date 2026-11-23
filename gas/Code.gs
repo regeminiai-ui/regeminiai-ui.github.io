@@ -863,45 +863,45 @@ function verifyAdminKey_(inputKey) {
 function getDefaultPricing_() {
   return {
     promo_banner: '',
-    tiers: {
-      sederhana: { price: 25000, promo_price: 0, promo_label: '' },
-      medium: { price: 35000, promo_price: 0, promo_label: '' },
-      rich: { price: 50000, promo_price: 0, promo_label: '' },
-    },
+    sederhana: { price: 79000, promo_price: 0, promo_label: '' },
+    medium: { price: 149000, promo_price: 0, promo_label: '' },
+    rich: { price: 249000, promo_price: 0, promo_label: '' },
+  };
+}
+
+function normalizePricing_(obj) {
+  const def = getDefaultPricing_();
+  if (!obj || typeof obj !== 'object') return def;
+  const src = obj.tiers && typeof obj.tiers === 'object' ? obj.tiers : obj;
+  const normTier = (k) => {
+    const t = src[k] || {};
+    return {
+      price: Math.max(0, Number(t.price ?? def[k].price)),
+      promo_price: Math.max(0, Number(t.promo_price ?? 0)),
+      promo_label: String(t.promo_label || '').trim(),
+    };
+  };
+  return {
+    promo_banner: String(obj.promo_banner || '').trim(),
+    sederhana: normTier('sederhana'),
+    medium: normTier('medium'),
+    rich: normTier('rich'),
   };
 }
 
 function handlePublicPricing_() {
   const raw = PropertiesService.getScriptProperties().getProperty('NIKAHPLAN_PRICING_JSON');
-  if (!raw) return getDefaultPricing_();
+  if (!raw) return { pricing: getDefaultPricing_() };
   try {
-    return Object.assign(getDefaultPricing_(), JSON.parse(raw));
+    return { pricing: normalizePricing_(JSON.parse(raw)) };
   } catch (e) {
-    return getDefaultPricing_();
+    return { pricing: getDefaultPricing_() };
   }
 }
 
 function handleAdminSavePricing_(payload) {
-  const pricing = {
-    promo_banner: String(payload.promo_banner || '').trim(),
-    tiers: {
-      sederhana: {
-        price: Math.max(0, Number(payload.sederhana_price || 25000)),
-        promo_price: Math.max(0, Number(payload.sederhana_promo || 0)),
-        promo_label: String(payload.sederhana_label || '').trim(),
-      },
-      medium: {
-        price: Math.max(0, Number(payload.medium_price || 35000)),
-        promo_price: Math.max(0, Number(payload.medium_promo || 0)),
-        promo_label: String(payload.medium_label || '').trim(),
-      },
-      rich: {
-        price: Math.max(0, Number(payload.rich_price || 50000)),
-        promo_price: Math.max(0, Number(payload.rich_promo || 0)),
-        promo_label: String(payload.rich_label || '').trim(),
-      },
-    },
-  };
+  const src = payload && payload.pricing && typeof payload.pricing === 'object' ? payload.pricing : payload;
+  const pricing = normalizePricing_(src);
   PropertiesService.getScriptProperties().setProperty('NIKAHPLAN_PRICING_JSON', JSON.stringify(pricing));
   return { pricing };
 }
@@ -915,7 +915,7 @@ function handleAdminDashboard_() {
   });
   const licenses = readRows_('licenses').map(stripMeta_).reverse();
   const payments = readRows_('payments').map(stripMeta_).reverse();
-  const pricing = handlePublicPricing_();
+  const pricing = handlePublicPricing_().pricing;
   return { users, licenses, payments, pricing };
 }
 

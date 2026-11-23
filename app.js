@@ -737,12 +737,14 @@ function renderPricingShowcase(pricingData) {
     const waUrl = `https://wa.me/6289509901360?text=${waMsg}`;
 
     return `
-      <div class="price-card${t.featured ? ' price-card-featured' : ''}">
-        ${badgeText ? `<span class="price-badge">${escapeHtml(badgeText)}</span>` : ''}
-        <h4>${escapeHtml(t.name)}</h4>
+      <div class="card pricing-card${t.featured ? ' featured' : ''}">
+        <div class="pricing-card-head">
+          <h4>${escapeHtml(t.name)}</h4>
+          ${badgeText ? `<span class="badge ${hasPromo ? 'badge-promo' : 'badge-ok'}">${escapeHtml(badgeText)}</span>` : ''}
+        </div>
         ${priceHtml}
-        <ul>${t.features.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
-        <a class="btn ${t.featured ? 'btn-primary' : 'btn-outline'} btn-full" href="${waUrl}" target="_blank" rel="noopener">Beli via WhatsApp (Admin: Ahmad Husain)</a>
+        <ul class="pricing-features">${t.features.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
+        <a class="btn ${t.featured ? 'btn-primary' : 'btn-outline'} btn-full pricing-cta" href="${waUrl}" target="_blank" rel="noopener">Beli via WhatsApp (Admin: Ahmad Husain)</a>
       </div>
     `;
   }).join('');

@@ -200,6 +200,38 @@ h1, h2, h3, .brand-title {
   border-color: var(--primary);
 }
 
+.pricing-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pricing-card-head h4 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.pricing-features {
+  padding-left: 18px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.92rem;
+}
+
+.pricing-cta {
+  margin-top: auto;
+}
+
+.badge-promo {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--ink);
+}
+
 .price-tag {
   font-family: 'Caveat', cursive;
   font-size: 2rem;
