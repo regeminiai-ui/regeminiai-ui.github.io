@@ -37,8 +37,8 @@ const MODULE_SCHEMAS = {
     fields: [
       { key: 'category', label: 'Kategori', type: 'select', options: ['Venue & Dekorasi', 'Catering', 'Busana & MUA', 'Dokumentasi', 'Undangan & Souvenir', 'KUA / Penghulu', 'Lainnya'], required: true },
       { key: 'item', label: 'Nama Item', type: 'text', required: true },
-      { key: 'estimated', label: 'Estimasi (Rp)', type: 'currency', default: 0 },
       { key: 'actual', label: 'Biaya Aktual (Rp)', type: 'currency', default: 0 },
+      { key: 'estimated', label: 'Estimasi Awal (Rp)', type: 'currency', default: 0 },
       { key: 'paid', label: 'Sudah Dibayar (Rp)', type: 'currency', default: 0 },
       { key: 'status', label: 'Status Pembayaran', type: 'select', options: ['Belum Bayar', 'DP', 'Lunas'], default: 'Belum Bayar' },
       { key: 'notes', label: 'Catatan', type: 'text' },
@@ -244,7 +244,23 @@ function demoApiCall(action, payload) {
   if (action === 'publicEventInfo') {
     const u = db.users.find((x) => x.id === payload.user_id);
     if (!u) throw new Error('Acara tidak ditemukan.');
-    return { name: u.name, partner_name: u.partner_name, wedding_date: u.wedding_date };
+    const g = payload.guest_id ? db.guests.find((x) => x.id === payload.guest_id && x.user_id === u.id) : null;
+    return {
+      name: u.name,
+      partner_name: u.partner_name,
+      wedding_date: u.wedding_date,
+      guest: g ? { id: g.id, name: g.name, pax: g.pax, rsvp: g.rsvp } : null,
+    };
+  }
+
+  if (action === 'publicGuestQrCheckin') {
+    const idx = db.guests.findIndex((x) => x.id === payload.guest_id && x.user_id === payload.user_id);
+    if (idx === -1) throw new Error('Data tamu tidak ditemukan.');
+    db.guests[idx].rsvp = 'Hadir';
+    db.guests[idx].updated_at = new Date().toISOString();
+    db.guests[idx].updated_by = db.guests[idx].name + ' (QR Scan)';
+    saveDemoDb(db);
+    return { guest: db.guests[idx] };
   }
 
   if (action === 'publicCheckin') {
@@ -565,11 +581,18 @@ function installmentsHtml(row) {
     <div class="installment-box">
       <strong>Cicilan (${list.length}x • Total ${formatRp(total)}):</strong>
       <ul class="installment-list">
-        ${list.map((c, idx) => `
-          <li class="installment-row">
-            <span>#${idx + 1} ${formatRp(c.amount)}${c.note ? ` (${escapeHtml(c.note)})` : ''} • ${escapeHtml(formatDateId(c.date) || '')}</span>
-            ${c.receipt_url ? `<a class="receipt-link" href="${escapeHtml(c.receipt_url)}" target="_blank" rel="noopener">Bukti</a>` : ''}
-          </li>`).join('')}
+        ${list.map((c, idx) => {
+          const who = resolveDisplayEmail(c.uploaded_by);
+          const when = formatDateTimeId(c.uploaded_at || c.date) || formatDateId(c.date) || '-';
+          return `
+            <li class="installment-row">
+              <div>
+                <span>#${idx + 1} ${formatRp(c.amount)}${c.note ? ` (${escapeHtml(c.note)})` : ''}</span>
+                <div class="audit-meta">${escapeHtml(who)} • ${escapeHtml(when)}</div>
+              </div>
+              ${c.receipt_url ? `<a class="receipt-link" href="${escapeHtml(c.receipt_url)}" target="_blank" rel="noopener">Bukti</a>` : ''}
+            </li>`;
+        }).join('')}
       </ul>
     </div>
   `;
@@ -969,11 +992,15 @@ function actionButtons(module, id) {
   const cicilanBtn = (module === 'budgets' || module === 'vendors')
     ? `<button type="button" class="btn btn-sm btn-outline" onclick="openInstallmentModal('${module}', '${id}')">+ Cicilan</button>`
     : '';
-  return `
+  const guestLinkBtn = module === 'guests'
+    ? `<button type="button" class="btn btn-sm btn-outline" onclick="copyGuestPersonalLink('${id}')">Link Scan</button>`
+    : '';
+  return `<div class="action-btns">
     ${cicilanBtn}
+    ${guestLinkBtn}
     <button type="button" class="btn btn-sm btn-outline" onclick="openEditModal('${module}', '${id}')">Edit</button>
     <button type="button" class="btn btn-sm btn-danger" onclick="deleteRecord('${module}', '${id}')">Hapus</button>
-  `;
+  </div>`;
 }
 
 function renderBudgets() {
@@ -986,27 +1013,32 @@ function renderBudgets() {
     )
     .sort((a, b) => (a.status === 'Lunas' ? 1 : 0) - (b.status === 'Lunas' ? 1 : 0));
   $('tbody-budgets').innerHTML = rows.length
-    ? rows.map((b) => `
-      <tr>
-        <td data-label="Sudah">
-          <input type="checkbox" ${b.status === 'Lunas' ? 'checked' : ''} onchange="toggleBudgetDone('${b.id}', this.checked)" />
-        </td>
-        <td data-label="Kategori">${escapeHtml(b.category)}</td>
-        <td data-label="Item">
-          <div style="${b.status === 'Lunas' ? 'text-decoration:line-through;color:var(--muted)' : ''}">
-            <strong>${escapeHtml(b.item)}</strong>
-            ${b.notes ? `<div class="muted">${escapeHtml(b.notes)}</div>` : ''}
-            ${receiptHtml(b)}
-            ${installmentsHtml(b)}
-          </div>
-        </td>
-        <td data-label="Estimasi">${formatRp(b.estimated)}</td>
-        <td data-label="Aktual">${formatRp(b.actual)}</td>
-        <td data-label="Terbayar">${formatRp(b.paid)}</td>
-        <td data-label="Status">${statusBadge(b.status)}</td>
-        ${auditCellsHtml(b)}
-        <td data-label="Aksi" class="td-actions">${actionButtons('budgets', b.id)}</td>
-      </tr>`).join('')
+    ? rows.map((b) => {
+        const aktual = Number(b.actual || 0);
+        const terbayar = Number(b.paid || 0);
+        const sisaEstimasi = Math.max(0, aktual - terbayar);
+        return `
+          <tr>
+            <td data-label="Sudah">
+              <input type="checkbox" ${b.status === 'Lunas' ? 'checked' : ''} onchange="toggleBudgetDone('${b.id}', this.checked)" />
+            </td>
+            <td data-label="Kategori">${escapeHtml(b.category)}</td>
+            <td data-label="Item">
+              <div style="${b.status === 'Lunas' ? 'text-decoration:line-through;color:var(--muted)' : ''}">
+                <strong>${escapeHtml(b.item)}</strong>
+                ${b.notes ? `<div class="muted">${escapeHtml(b.notes)}</div>` : ''}
+                ${receiptHtml(b)}
+                ${installmentsHtml(b)}
+              </div>
+            </td>
+            <td data-label="Aktual">${formatRp(aktual)}</td>
+            <td data-label="Estimasi (Sisa)">${formatRp(sisaEstimasi)}</td>
+            <td data-label="Sudah Dibayar">${formatRp(terbayar)}</td>
+            <td data-label="Status">${statusBadge(b.status)}</td>
+            ${auditCellsHtml(b)}
+            <td data-label="Aksi" class="td-actions">${actionButtons('budgets', b.id)}</td>
+          </tr>`;
+      }).join('')
     : '<tr class="empty-row"><td colspan="10" class="muted">Belum ada data anggaran.</td></tr>';
 }
 
@@ -1536,14 +1568,17 @@ document.addEventListener('DOMContentLoaded', () => {
           });
           const totalCicilan = list.reduce((s, x) => s + Number(x.amount || 0), 0);
           const paidField = ctx.module === 'budgets' ? 'paid' : 'dp_paid';
-          const nextStatus = existing.status === 'Lunas'
+          const newPaid = Math.max(Number(existing[paidField] || 0) + amount, totalCicilan);
+          const targetTotal = Number(ctx.module === 'budgets' ? (existing.actual || 0) : (existing.price || 0));
+          const isAutoLunas = targetTotal > 0 && newPaid >= targetTotal;
+          const nextStatus = (existing.status === 'Lunas' || isAutoLunas)
             ? 'Lunas'
             : (ctx.module === 'budgets' ? 'DP' : (existing.status === 'Survey' ? 'Deal' : existing.status));
 
           const updatedItem = {
             ...existing,
             installments_json: JSON.stringify(list),
-            [paidField]: Math.max(Number(existing[paidField] || 0) + amount, totalCicilan),
+            [paidField]: newPaid,
             status: nextStatus,
             receipt_url: receiptUrl || existing.receipt_url || '',
             receipt_uploaded_at: uploadedAt || existing.receipt_uploaded_at || '',
@@ -1629,6 +1664,9 @@ document.addEventListener('DOMContentLoaded', () => {
               throw new Error('Pilih file foto atau PDF terlebih dahulu.');
             }
 
+            if (ctx.module === 'budgets' && Number(item.actual || 0) > 0 && Number(item.paid || 0) >= Number(item.actual || 0)) {
+              item.status = 'Lunas';
+            }
             const res = await apiCall('upsertItem', { module: ctx.module, item });
             const list = state.data[ctx.module];
             if (ctx.id) {
@@ -1753,13 +1791,88 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   $('btn-theme-toggle').addEventListener('click', toggleTheme);
 
-  const checkinUserId = new URLSearchParams(window.location.search).get('checkin');
-  if (checkinUserId) {
+  const params = new URLSearchParams(window.location.search);
+  const guestCheckinUserId = params.get('guest_checkin');
+  const guestId = params.get('guest_id');
+  const checkinUserId = params.get('checkin');
+  if (guestCheckinUserId && guestId) {
+    initGuestScannerView(guestCheckinUserId, guestId);
+  } else if (checkinUserId) {
     initCheckinView(checkinUserId);
   } else {
     renderAuthOrApp();
   }
 });
+
+window.copyGuestPersonalLink = async (guestId) => {
+  if (!state.user?.id) return;
+  const base = window.location.origin + window.location.pathname;
+  const url = `${base}?guest_checkin=${encodeURIComponent(state.user.id)}&guest_id=${encodeURIComponent(guestId)}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('Link scan QR pribadi tamu disalin!');
+  } catch {
+    prompt('Salin link tamu ini:', url);
+  }
+};
+
+async function initGuestScannerView(userId, guestId) {
+  $('auth-view').classList.add('hidden');
+  $('app-view').classList.add('hidden');
+  $('checkin-view').classList.add('hidden');
+  $('guest-scanner-view').classList.remove('hidden');
+
+  try {
+    const info = await apiCall('publicEventInfo', { user_id: userId, guest_id: guestId });
+    $('gs-couple').textContent = `${info.name} & ${info.partner_name}`;
+    const guestName = info.guest ? info.guest.name : 'Tamu Undangan';
+    $('gs-guest-greeting').textContent = `Halo, ${guestName}!`;
+    if (info.guest && info.guest.rsvp === 'Hadir') {
+      $('gs-scan-box').classList.add('hidden');
+      $('gs-success-msg').textContent = `Terima kasih ${guestName}, kehadiran Anda sudah tercatat Hadir.`;
+      $('gs-scan-success').classList.remove('hidden');
+      return;
+    }
+  } catch (err) {
+    showToast(err.message, true);
+  }
+
+  let scanner = null;
+  $('btn-start-scan').addEventListener('click', async () => {
+    const btn = $('btn-start-scan');
+    if (typeof Html5Qrcode === 'undefined') {
+      showToast('Library kamera QR belum termuat. Refresh halaman.', true);
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Membuka kamera...';
+    try {
+      scanner = new Html5Qrcode('qr-reader');
+      await scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        async (decodedText) => {
+          if (decodedText.includes(userId)) {
+            await scanner.stop().catch(() => {});
+            const res = await apiCall('publicGuestQrCheckin', { user_id: userId, guest_id: guestId });
+            $('gs-scan-box').classList.add('hidden');
+            $('gs-success-msg').textContent = `Terima kasih ${res.guest?.name || ''}, status Anda otomatis tercatat Hadir!`;
+            $('gs-scan-success').classList.remove('hidden');
+            showToast('Kehadiran berhasil tercatat!');
+          } else {
+            showToast('QR Code tidak sesuai dengan acara ini.', true);
+          }
+        },
+        () => {}
+      );
+      btn.textContent = 'Kamera Aktif — Arahkan ke QR';
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Buka Kamera Scan QR';
+      showToast('Gagal membuka kamera: ' + (err.message || err), true);
+    }
+  });
+}
 
 function applyTheme(theme) {
   const isDark = theme === 'dark';

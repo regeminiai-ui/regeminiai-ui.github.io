@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
-  <link rel="stylesheet" href="styles.css?v=21" />
+  <link rel="stylesheet" href="styles.css?v=22" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -123,6 +123,30 @@
         <h3>Terima Kasih!</h3>
         <p class="muted">Kehadiran Anda telah tercatat di buku tamu.</p>
         <button type="button" id="btn-checkin-again" class="btn btn-outline btn-full">Isi untuk Tamu Lain</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PERSONAL GUEST QR SCANNER VIEW (?guest_checkin=...&guest_id=...) -->
+  <section id="guest-scanner-view" class="auth-wrapper hidden">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.7-9.2-9C1.5 8.1 3.7 4.8 7 4.8c1.9 0 3.6 1 5 2.7 1.4-1.7 3.1-2.7 5-2.7 3.3 0 5.5 3.3 4.2 6.7-1.7 4.3-9.2 9-9.2 9z"/></svg>
+        </span>
+        <h1 id="gs-couple">Undangan Pernikahan</h1>
+        <p id="gs-guest-greeting" class="muted">Memuat data tamu...</p>
+      </div>
+
+      <div id="gs-scan-box" class="form-stack">
+        <p class="muted" style="text-align:center">Arahkan kamera ke <strong>QR Code</strong> di meja penerima tamu untuk mencatat kehadiran Anda.</p>
+        <div id="qr-reader"></div>
+        <button type="button" id="btn-start-scan" class="btn btn-primary btn-full">Buka Kamera Scan QR</button>
+      </div>
+
+      <div id="gs-scan-success" class="checkin-success hidden">
+        <h3>Kehadiran Tercatat!</h3>
+        <p id="gs-success-msg" class="muted">Status Anda sudah otomatis diperbarui menjadi Hadir.</p>
       </div>
     </div>
   </section>
@@ -293,8 +317,8 @@
                 <th>Sudah</th>
                 <th>Kategori</th>
                 <th>Item</th>
-                <th>Estimasi</th>
                 <th>Aktual</th>
+                <th>Estimasi (Sisa)</th>
                 <th>Sudah Dibayar</th>
                 <th>Status</th>
                 <th>User</th>
@@ -567,6 +591,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=21"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="app.js?v=22"></script>
 </body>
 </html>

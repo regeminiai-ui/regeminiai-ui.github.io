@@ -41,6 +41,7 @@ function doPost(e) {
     if (action === 'login') return jsonResponse({ ok: true, data: handleLogin_(payload) });
     if (action === 'publicEventInfo') return jsonResponse({ ok: true, data: handlePublicEventInfo_(payload) });
     if (action === 'publicCheckin') return jsonResponse({ ok: true, data: handlePublicCheckin_(payload) });
+    if (action === 'publicGuestQrCheckin') return jsonResponse({ ok: true, data: handlePublicGuestQrCheckin_(payload) });
 
     // Protected routes
     const auth = verifyToken_(body.token);
@@ -513,15 +514,54 @@ function handleResetUserData_(auth) {
 // --- Public Guest QR Check-in Handlers ---
 function handlePublicEventInfo_(payload) {
   const userId = String(payload.user_id || '').trim();
+  const guestId = String(payload.guest_id || '').trim();
   if (!userId) throw new Error('ID acara tidak valid.');
   const users = readRows_('users');
   const user = users.find((u) => u.id === userId);
   if (!user) throw new Error('Acara tidak ditemukan.');
+  let guest = null;
+  if (guestId) {
+    const guests = readRows_('guests');
+    const g = guests.find((x) => x.id === guestId && x.user_id === userId);
+    if (g) {
+      guest = { id: g.id, name: g.name, pax: g.pax, rsvp: g.rsvp };
+    }
+  }
   return {
     name: user.name,
     partner_name: user.partner_name,
     wedding_date: user.wedding_date,
+    guest: guest,
   };
+}
+
+function handlePublicGuestQrCheckin_(payload) {
+  const userId = String(payload.user_id || '').trim();
+  const guestId = String(payload.guest_id || '').trim();
+  if (!userId || !guestId) throw new Error('Link tamu tidak valid.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('guests');
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const rows = readRows_('guests');
+    const existing = rows.find((r) => r.id === guestId && r.user_id === userId);
+    if (!existing) throw new Error('Data tamu tidak ditemukan.');
+
+    const now = new Date().toISOString();
+    const actor = existing.name + ' (QR Scan)';
+    const merged = Object.assign({}, stripMeta_(existing), {
+      rsvp: 'Hadir',
+      updated_at: now,
+      updated_by: actor,
+    });
+    sheet.getRange(existing._rowIndex, 1, 1, headers.length).setValues([headers.map((h) => merged[h] ?? '')]);
+    logActivity_(userId, 'UPDATE', 'guests', existing.name + ' (Hadir via QR)', actor, now);
+    return { guest: merged };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function handlePublicCheckin_(payload) {
