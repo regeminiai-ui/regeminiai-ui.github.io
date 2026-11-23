@@ -1,16 +1,20 @@
 :root {
-  --bg: #faf7f4;
-  --surface: #ffffff;
-  --surface-alt: #f3ede7;
-  --text: #2c2420;
-  --muted: #766962;
-  --primary: #9e5a63;
-  --primary-hover: #83464f;
-  --accent: #5f7a61;
+  --bg: #fdfaf3;
+  --surface: #fffdf8;
+  --surface-alt: #f5eee0;
+  --text: #322620;
+  --muted: #706057;
+  --ink: #382b26;
+  --primary: #b85d69;
+  --primary-hover: #9c4a55;
+  --accent: #4c7355;
   --danger: #b83b3b;
-  --border: #e5dcd5;
-  --radius: 12px;
-  --shadow: 0 8px 24px rgba(44, 36, 32, 0.06);
+  --border: #382b26;
+  --border-soft: #d7ccbc;
+  --radius: 16px 20px 15px 22px / 20px 14px 22px 16px;
+  --radius-sm: 12px 15px 11px 14px / 14px 10px 15px 12px;
+  --shadow: 3px 4px 0 #382b26;
+  --shadow-sm: 2px 3px 0 #382b26;
 }
 
 * {
@@ -21,7 +25,9 @@
 
 body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: radial-gradient(#e0d6c5 1px, transparent 1px);
+  background-size: 20px 20px;
   color: var(--text);
   line-height: 1.5;
   min-height: 100vh;
@@ -32,10 +38,21 @@ body.drawer-open {
   overflow: hidden;
 }
 
-h1, h2, h3 {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+h1, h2, h3, .brand-title {
+  font-family: 'Caveat', cursive;
   font-weight: 700;
   letter-spacing: 0.01em;
+}
+
+.svg-icon {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  flex-shrink: 0;
 }
 
 .hidden {
@@ -54,13 +71,18 @@ h1, h2, h3 {
   justify-content: center;
   width: 42px;
   height: 42px;
-  border-radius: 50%;
+  border-radius: 52% 48% 55% 45% / 45% 55% 48% 52%;
+  border: 2px solid var(--ink);
   background: var(--primary);
   color: #fff;
-  font-family: 'Cormorant Garamond', serif;
-  font-weight: 700;
-  font-size: 1.2rem;
+  box-shadow: var(--shadow-sm);
   flex-shrink: 0;
+}
+
+.brand-mark .svg-icon {
+  width: 22px;
+  height: 22px;
+  fill: rgba(255, 255, 255, 0.2);
 }
 
 /* Auth */
@@ -76,7 +98,7 @@ h1, h2, h3 {
   width: 100%;
   max-width: 420px;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
   padding: 32px;
   box-shadow: var(--shadow);
@@ -159,8 +181,8 @@ h1, h2, h3 {
 input, select, textarea {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 0.92rem;
   background: #fff;
@@ -168,7 +190,8 @@ input, select, textarea {
 }
 
 input:focus, select:focus, textarea:focus {
-  outline: 2px solid rgba(158, 90, 99, 0.25);
+  outline: none;
+  box-shadow: var(--shadow-sm);
   border-color: var(--primary);
 }
 
@@ -176,14 +199,22 @@ input:focus, select:focus, textarea:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
+  font-family: 'Patrick Hand', 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
-  font-size: 0.9rem;
-  border: 1px solid transparent;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  border: 2px solid var(--ink);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+}
+
+.btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
 
 .btn-primary {
@@ -197,7 +228,6 @@ input:focus, select:focus, textarea:focus {
 
 .btn-outline {
   background: var(--surface);
-  border-color: var(--border);
   color: var(--text);
 }
 
@@ -207,26 +237,29 @@ input:focus, select:focus, textarea:focus {
 
 .btn-ghost {
   background: transparent;
+  border-color: transparent;
+  box-shadow: none;
   color: var(--muted);
 }
 
 .btn-ghost:hover {
   background: var(--surface-alt);
+  border-color: var(--ink);
   color: var(--text);
 }
 
 .btn-sm {
-  padding: 5px 10px;
-  font-size: 0.8rem;
+  padding: 4px 10px;
+  font-size: 0.88rem;
 }
 
 .btn-danger {
-  background: transparent;
+  background: #fdecec;
   color: var(--danger);
 }
 
 .btn-danger:hover {
-  background: #fdecec;
+  background: #fad5d5;
 }
 
 .btn-full {
@@ -262,11 +295,11 @@ input:focus, select:focus, textarea:focus {
   height: 100vh;
   overflow-y: auto;
   background: var(--surface);
-  border-right: 1px solid var(--border);
+  border-right: 2px solid var(--ink);
   padding: 20px 16px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .sidebar-header {
@@ -276,34 +309,39 @@ input:focus, select:focus, textarea:focus {
 }
 
 .brand-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1.35rem;
+  font-family: 'Caveat', cursive;
+  font-size: 1.65rem;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.05;
 }
 
 .brand-sub {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: var(--muted);
 }
 
 .nav-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
 }
 
 .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   text-align: left;
-  padding: 10px 12px;
-  border: none;
+  padding: 9px 12px;
+  border: 2px solid transparent;
   background: transparent;
-  border-radius: 8px;
-  font-weight: 500;
-  font-size: 0.92rem;
+  border-radius: var(--radius-sm);
+  font-family: 'Patrick Hand', 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 1.05rem;
   color: var(--muted);
   cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
 
 .nav-item:hover {
@@ -312,9 +350,10 @@ input:focus, select:focus, textarea:focus {
 }
 
 .nav-item.active {
-  background: #f6eaec;
+  background: #fbe9ec;
+  border-color: var(--ink);
+  box-shadow: var(--shadow-sm);
   color: var(--primary);
-  font-weight: 700;
 }
 
 .sidebar-footer {
@@ -349,8 +388,9 @@ input:focus, select:focus, textarea:focus {
 
 .menu-toggle {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
   width: 40px;
   height: 40px;
   font-size: 1.25rem;
@@ -460,7 +500,7 @@ input:focus, select:focus, textarea:focus {
 /* Cards & Grids */
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
   padding: 20px;
   box-shadow: var(--shadow);
@@ -482,9 +522,10 @@ input:focus, select:focus, textarea:focus {
 
 .stat-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
   padding: 18px;
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -547,15 +588,16 @@ table {
 th, td {
   text-align: left;
   padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1.5px dashed var(--border-soft);
 }
 
 th {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
+  font-family: 'Patrick Hand', 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.03em;
+  color: var(--text);
   background: var(--surface-alt);
+  border-bottom: 2px solid var(--ink);
 }
 
 tr:last-child td {
@@ -565,9 +607,11 @@ tr:last-child td {
 /* Badges & Lists */
 .badge {
   display: inline-block;
-  padding: 3px 9px;
-  border-radius: 999px;
-  font-size: 0.76rem;
+  padding: 3px 10px;
+  border: 1.5px solid var(--ink);
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  font-family: 'Patrick Hand', 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.85rem;
   font-weight: 600;
   text-align: center;
 }
@@ -616,6 +660,7 @@ tr:last-child td {
   max-height: 90vh;
   overflow-y: auto;
   background: var(--surface);
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
   padding: 24px;
   box-shadow: var(--shadow);
