@@ -328,9 +328,19 @@ function handleGetAll_(userId) {
   return result;
 }
 
+function resolveActorEmail_(auth) {
+  if (auth && auth.actorEmail) return auth.actorEmail;
+  if (auth && auth.userId) {
+    const users = readRows_('users');
+    const u = users.find((x) => x.id === auth.userId);
+    if (u && u.email) return String(u.email);
+  }
+  return '-';
+}
+
 function handleUpsertItem_(auth, payload) {
   const userId = auth.userId;
-  const actor = auth.actorEmail || userId;
+  const actor = resolveActorEmail_(auth);
   const mod = payload.module;
   if (DATA_MODULES.indexOf(mod) === -1) throw new Error('Modul tidak valid.');
   const item = payload.item || {};
@@ -380,7 +390,7 @@ function handleUpsertItem_(auth, payload) {
 
 function handleDeleteItem_(auth, payload) {
   const userId = auth.userId;
-  const actor = auth.actorEmail || userId;
+  const actor = resolveActorEmail_(auth);
   const mod = payload.module;
   const id = payload.id;
   if (DATA_MODULES.indexOf(mod) === -1) throw new Error('Modul tidak valid.');
@@ -402,7 +412,7 @@ function handleDeleteItem_(auth, payload) {
 
 function handleUploadReceipt_(auth, payload) {
   const userId = auth.userId;
-  const actor = auth.actorEmail || userId;
+  const actor = resolveActorEmail_(auth);
   const base64 = String(payload.base64 || '');
   const mimeType = String(payload.mimeType || 'image/jpeg');
   const filename = String(payload.filename || ('kwitansi_' + Date.now() + '.jpg'));
@@ -439,7 +449,7 @@ function handleUploadReceipt_(auth, payload) {
 
 function handleResetUserData_(auth) {
   const userId = auth.userId;
-  const actor = auth.actorEmail || userId;
+  const actor = resolveActorEmail_(auth);
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
