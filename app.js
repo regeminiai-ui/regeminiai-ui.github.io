@@ -744,7 +744,7 @@ function renderPricingShowcase(pricingData) {
         </div>
         ${priceHtml}
         <ul class="pricing-features">${t.features.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
-        <a class="btn ${t.featured ? 'btn-primary' : 'btn-outline'} btn-full pricing-cta" href="${waUrl}" target="_blank" rel="noopener">Beli via WhatsApp (Admin: Ahmad Husain)</a>
+        <a class="btn ${t.featured ? 'btn-primary' : 'btn-outline'} btn-full pricing-cta" href="${waUrl}" target="_blank" rel="noopener">Beli</a>
       </div>
     `;
   }).join('');
