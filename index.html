@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
-  <link rel="stylesheet" href="styles.css?v=30" />
+  <link rel="stylesheet" href="styles.css?v=31" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -21,7 +21,7 @@
           <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.7-9.2-9C1.5 8.1 3.7 4.8 7 4.8c1.9 0 3.6 1 5 2.7 1.4-1.7 3.1-2.7 5-2.7 3.3 0 5.5 3.3 4.2 6.7-1.7 4.3-9.2 9-9.2 9z"/></svg>
         </span>
         <h1>My Weeding Plan</h1>
-        <p>Rencana pernikahan terstruktur, tersimpan aman di Google Sheets.</p>
+        <p>Rencana pernikahan terstruktur, tersimpan aman secara online.</p>
       </div>
 
       <div id="mode-banner" class="mode-banner hidden"></div>
@@ -757,15 +757,14 @@
           </form>
 
           <form id="api-form" class="card form-stack">
-            <h3>Koneksi Google Spreadsheet</h3>
-            <p class="muted">Tempel URL Web App dari Google Apps Script (`https://script.google.com/macros/s/.../exec`). Kosongkan untuk memakai Mode Demo lokal.</p>
-            <div class="field">
-              <label for="set-api-url">URL Web App Google Apps Script</label>
-              <input id="set-api-url" type="url" placeholder="https://script.google.com/macros/s/.../exec" />
+            <h3>Backup &amp; Koneksi Server</h3>
+            <p class="muted">Simpan cadangan data akun Anda dalam format JSON kapan saja.</p>
+            <div class="field hidden">
+              <label for="set-api-url">URL Server</label>
+              <input id="set-api-url" type="url" placeholder="https://..." />
             </div>
             <div class="btn-row">
-              <button type="submit" class="btn btn-primary">Simpan URL</button>
-              <button type="button" id="btn-export-json" class="btn btn-outline">Backup JSON</button>
+              <button type="button" id="btn-export-json" class="btn btn-primary">Backup JSON</button>
             </div>
           </form>
         </div>
@@ -784,7 +783,7 @@
 
         <div class="card danger-card form-stack">
           <h3>Reset Data Akun Ini</h3>
-          <p class="muted">Menghapus semua data Anggaran, Daftar Tamu, Vendor, Checklist, Rundown, dan Asset di Spreadsheet milik akun Anda saja. File yang sudah tersimpan di Google Drive Anda tidak akan dihapus.</p>
+          <p class="muted">Menghapus semua data Anggaran, Daftar Tamu, Vendor, Checklist, Rundown, dan Asset milik akun Anda saja. File yang sudah tersimpan di Google Drive Anda tidak akan dihapus.</p>
           <div>
             <button type="button" id="btn-reset-all" class="btn btn-danger">Reset Semua Data</button>
           </div>
@@ -826,6 +825,6 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="app.js?v=30"></script>
+  <script src="app.js?v=31"></script>
 </body>
 </html>

@@ -498,7 +498,7 @@ function logout(notify = true) {
 function updateModeBanner() {
   const banner = $('mode-banner');
   if (isDemoMode()) {
-    banner.textContent = 'Mode Demo Aktif (data tersimpan di browser ini). Atur URL Google Apps Script untuk sinkron ke Google Sheets.';
+    banner.textContent = 'Mode Demo Aktif (data tersimpan di browser ini).';
     banner.classList.remove('hidden');
   } else {
     banner.classList.add('hidden');
@@ -2092,7 +2092,7 @@ window.adminRemoveUser = (userId, email, partnerEmail) => {
   const pairText = partnerEmail ? `${email} & pasangannya (${partnerEmail})` : email;
   openConfirmModal({
     title: 'Hapus User Permanen',
-    message: `Hapus akun ${pairText} beserta seluruh datanya di Spreadsheet? (File di Google Drive tidak dihapus).`,
+    message: `Hapus akun ${pairText} beserta seluruh datanya? (File di Google Drive tidak dihapus).`,
     confirmText: 'Ya, Hapus User',
     isDanger: true,
     onConfirm: async () => {
