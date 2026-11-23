@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NikahPlan — Perencana Pernikahan</title>
+  <title>My Weeding Plan — Perencana Pernikahan</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,8 +17,8 @@
   <section id="auth-view" class="auth-wrapper">
     <div class="auth-card">
       <div class="auth-brand">
-        <span class="brand-mark">NP</span>
-        <h1>NikahPlan</h1>
+        <span class="brand-mark">MW</span>
+        <h1>My Weeding Plan</h1>
         <p>Rencana pernikahan terstruktur, tersimpan aman di Google Sheets.</p>
       </div>
 
@@ -75,17 +75,20 @@
 
   <!-- MAIN APP VIEW -->
   <div id="app-view" class="app-layout hidden">
-    <aside class="sidebar">
+    <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
+    <aside id="sidebar" class="sidebar">
       <div class="sidebar-header">
-        <span class="brand-mark">NP</span>
-        <div>
-          <div class="brand-title">NikahPlan</div>
+        <span class="brand-mark">MW</span>
+        <div class="sidebar-brand-text">
+          <div class="brand-title">My Weeding Plan</div>
           <div id="sidebar-couple" class="brand-sub">-</div>
         </div>
+        <button type="button" id="btn-menu-close" class="icon-btn mobile-only" aria-label="Tutup Menu">&times;</button>
       </div>
 
       <nav class="nav-list" aria-label="Menu Utama">
         <button type="button" class="nav-item active" data-tab="dashboard">Ringkasan</button>
+        <button type="button" class="nav-item" data-tab="plans">Rekomendasi Plan</button>
         <button type="button" class="nav-item" data-tab="budgets">Anggaran</button>
         <button type="button" class="nav-item" data-tab="guests">Daftar Tamu</button>
         <button type="button" class="nav-item" data-tab="vendors">Vendor</button>
@@ -102,9 +105,12 @@
 
     <main class="main-content">
       <header class="topbar">
-        <div>
-          <h2 id="page-title">Ringkasan</h2>
-          <p id="wedding-countdown" class="muted">Atur tanggal pernikahan di Pengaturan</p>
+        <div class="topbar-left">
+          <button type="button" id="btn-menu-toggle" class="menu-toggle mobile-only" aria-label="Buka Menu">&#9776;</button>
+          <div>
+            <h2 id="page-title">Ringkasan</h2>
+            <p id="wedding-countdown" class="muted">Atur tanggal pernikahan di Pengaturan</p>
+          </div>
         </div>
         <div class="topbar-actions">
           <button type="button" id="btn-refresh" class="btn btn-outline">Sinkronkan</button>
@@ -154,6 +160,15 @@
         </div>
       </section>
 
+      <!-- REKOMENDASI PLAN -->
+      <section id="tab-plans" class="tab-panel hidden">
+        <div class="card plan-intro">
+          <h3>Pilih Paket Rekomendasi Pernikahan</h3>
+          <p class="muted">Pilih salah satu konsep di bawah untuk mengisi otomatis pos <strong>Anggaran</strong> dan daftar <strong>Checklist</strong>. Setelah diterapkan, Anda tinggal mencentang item yang sudah maupun yang belum selesai.</p>
+        </div>
+        <div id="plans-grid" class="plans-grid"></div>
+      </section>
+
       <!-- BUDGETS -->
       <section id="tab-budgets" class="tab-panel hidden">
         <div class="panel-toolbar">
@@ -172,6 +187,7 @@
           <table>
             <thead>
               <tr>
+                <th>Sudah</th>
                 <th>Kategori</th>
                 <th>Item</th>
                 <th>Estimasi</th>

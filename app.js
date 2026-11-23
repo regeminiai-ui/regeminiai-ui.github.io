@@ -334,12 +334,168 @@ async function loadAllData() {
 // --- Rendering ---
 function renderAll() {
   renderDashboard();
+  renderPlans();
   renderBudgets();
   renderGuests();
   renderVendors();
   renderChecklists();
   renderRundowns();
 }
+
+const WEDDING_PLANS = [
+  {
+    id: 'sederhana',
+    name: 'Plan Sederhana',
+    badge: '~50 Tamu',
+    summary: 'Fokus pada prosesi inti (Akad / Pemberkatan) dan syukuran hangat bersama keluarga terdekat di rumah atau ruang serbaguna.',
+    budgets: [
+      { category: 'KUA / Penghulu', item: 'Administrasi & Penghulu / Catatan Sipil', estimated: 1000000 },
+      { category: 'Busana & MUA', item: 'Rias Pengantin & Busana Akad Sederhana', estimated: 4500000 },
+      { category: 'Catering', item: 'Prasmanan Keluarga & Snack Box (50 pax)', estimated: 7500000 },
+      { category: 'Venue & Dekorasi', item: 'Dekorasi Backdrop Akad Minimalis & Tenda', estimated: 5000000 },
+      { category: 'Dokumentasi', item: 'Fotografer Akad (Half Day)', estimated: 3500000 },
+      { category: 'Undangan & Souvenir', item: 'Undangan Digital & Souvenir 50 pcs', estimated: 1500000 },
+      { category: 'Lainnya', item: 'Mahar, Cincin & Dana Darurat', estimated: 2000000 },
+    ],
+    checklists: [
+      { phase: 'H-3 Bulan', task: 'Daftar berkas nikah ke KUA / Dukcapil', pic: 'Calon Pengantin' },
+      { phase: 'H-3 Bulan', task: 'Tentukan tanggal & lokasi syukuran rumah/aula', pic: 'Keluarga' },
+      { phase: 'H-1 Bulan', task: 'Fitting busana & booking MUA', pic: 'Mempelai Wanita' },
+      { phase: 'H-1 Bulan', task: 'Pesan catering & snack box untuk 50 tamu', pic: 'Keluarga' },
+      { phase: 'H-1 Minggu', task: 'Sebar undangan digital ke keluarga & sahabat', pic: 'Calon Pengantin' },
+      { phase: 'Hari-H', task: 'Siapkan mahar, cincin, dan dokumen asli', pic: 'PIC Keluarga' },
+    ],
+  },
+  {
+    id: 'intimate',
+    name: 'Plan Intimate',
+    badge: '~150 Tamu',
+    summary: 'Konsep hangat di restoran, cafe, atau garden venue dengan dekorasi estetik, makan malam/siang bersama, dan sesi foto santai.',
+    budgets: [
+      { category: 'Venue & Dekorasi', item: 'Sewa Garden / Resto Venue + Dekorasi Intimate', estimated: 22000000 },
+      { category: 'Catering', item: 'Paket Menu & Beverage 150 pax', estimated: 24000000 },
+      { category: 'Busana & MUA', item: 'MUA, Attire Akad & Resepsi + Keluarga Inti', estimated: 10000000 },
+      { category: 'Dokumentasi', item: 'Foto & Video Highlight (Full Day)', estimated: 8500000 },
+      { category: 'Undangan & Souvenir', item: 'Undangan Digital + Souvenir Custom 150 pcs', estimated: 4000000 },
+      { category: 'KUA / Penghulu', item: 'Administrasi KUA / Pencatatan Sipil', estimated: 1500000 },
+      { category: 'Lainnya', item: 'MC, Akustik Band & MC/WO On The Day', estimated: 5000000 },
+    ],
+    checklists: [
+      { phase: 'H-6 Bulan', task: 'Survei & DP venue cafe/garden intimate', pic: 'Calon Pengantin' },
+      { phase: 'H-3 Bulan', task: 'Booking MUA, dokumentasi foto/video & MC', pic: 'Calon Pengantin' },
+      { phase: 'H-3 Bulan', task: 'Food tasting & finalisasi menu 150 pax', pic: 'Calon Pengantin' },
+      { phase: 'H-1 Bulan', task: 'Urus berkas KUA / Catatan Sipil', pic: 'Calon Pengantin' },
+      { phase: 'H-1 Bulan', task: 'Kirim undangan & konfirmasi RSVP tamu', pic: 'Calon Pengantin' },
+      { phase: 'H-1 Minggu', task: 'Technical meeting venue, WO & vendor musik', pic: 'WO / PIC' },
+      { phase: 'Hari-H', task: 'Cek rundown akad, mingling & foto keluarga', pic: 'WO / PIC' },
+    ],
+  },
+  {
+    id: 'pesta',
+    name: 'Plan Pesta',
+    badge: '~500 Tamu',
+    summary: 'Resepsi lengkap di gedung atau ballroom dengan tim Wedding Organizer penuh, dekorasi megah, catering besar, dan hiburan live.',
+    budgets: [
+      { category: 'Venue & Dekorasi', item: 'Sewa Gedung/Ballroom + Pelaminan & Lighting', estimated: 60000000 },
+      { category: 'Catering', item: 'Buffet 500 pax + 4 Stall Makanan Favorit', estimated: 75000000 },
+      { category: 'Busana & MUA', item: 'MUA, Gaun/Kebaya Pengantin, Orang Tua & Bridesmaid', estimated: 22000000 },
+      { category: 'Dokumentasi', item: 'Prewedding + Foto & Video Cinematic (2 Tim)', estimated: 16000000 },
+      { category: 'Lainnya', item: 'Full Wedding Organizer, MC & Live Band', estimated: 15000000 },
+      { category: 'Undangan & Souvenir', item: 'Undangan Cetak/Digital & Souvenir 500 pcs', estimated: 9000000 },
+      { category: 'KUA / Penghulu', item: 'Administrasi KUA / Penghulu & Mahar', estimated: 3000000 },
+    ],
+    checklists: [
+      { phase: 'H-6 Bulan', task: 'Booking gedung/ballroom & Wedding Organizer', pic: 'Calon Pengantin' },
+      { phase: 'H-6 Bulan', task: 'Booking vendor dekorasi, catering & dokumentasi', pic: 'WO' },
+      { phase: 'H-3 Bulan', task: 'Sesi foto prewedding & desain undangan', pic: 'Calon Pengantin' },
+      { phase: 'H-3 Bulan', task: 'Fitting busana pengantin, orang tua & among tamu', pic: 'MUA / Keluarga' },
+      { phase: 'H-1 Bulan', task: 'Urus administrasi KUA & distribusi undangan fisik/digital', pic: 'Keluarga' },
+      { phase: 'H-1 Minggu', task: 'Technical meeting besar bersama semua vendor & keluarga', pic: 'WO' },
+      { phase: 'Hari-H', task: 'Briefing panitia keluarga, penerima tamu & rundown ballroom', pic: 'WO' },
+    ],
+  },
+];
+
+function renderPlans() {
+  const container = $('plans-grid');
+  if (!container) return;
+  container.innerHTML = WEDDING_PLANS.map((plan) => {
+    const totalEst = plan.budgets.reduce((sum, b) => sum + b.estimated, 0);
+    return `
+      <article class="card plan-card">
+        <div class="plan-card-head">
+          <h3>${escapeHtml(plan.name)}</h3>
+          <span class="badge badge-ok">${escapeHtml(plan.badge)}</span>
+        </div>
+        <div class="plan-budget-total">Estimasi: ${formatRp(totalEst)}</div>
+        <p class="muted">${escapeHtml(plan.summary)}</p>
+
+        <div>
+          <div class="plan-section-title">Ringkasan Anggaran (${plan.budgets.length} pos)</div>
+          <ul class="plan-preview-list">
+            ${plan.budgets.map((b) => `<li><span>${escapeHtml(b.item)}</span><strong>${formatRp(b.estimated)}</strong></li>`).join('')}
+          </ul>
+        </div>
+
+        <div>
+          <div class="plan-section-title">Checklist Persiapan (${plan.checklists.length} tugas)</div>
+          <ul class="plan-preview-list">
+            ${plan.checklists.map((c) => `<li><span>${escapeHtml(c.task)}</span><span class="muted">${escapeHtml(c.phase)}</span></li>`).join('')}
+          </ul>
+        </div>
+
+        <div class="plan-card-footer">
+          <button type="button" class="btn btn-primary btn-full" onclick="applyWeddingPlan('${plan.id}', this)">Terapkan ${escapeHtml(plan.name)}</button>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+window.applyWeddingPlan = async (planId, btnEl) => {
+  const plan = WEDDING_PLANS.find((p) => p.id === planId);
+  if (!plan) return;
+
+  const hasExisting = state.data.budgets.length > 0 || state.data.checklists.length > 0;
+  const msg = hasExisting
+    ? `Tambahkan ${plan.budgets.length} pos anggaran dan ${plan.checklists.length} checklist dari ${plan.name} ke data Anda?`
+    : `Terapkan ${plan.name} (${plan.budgets.length} pos anggaran & ${plan.checklists.length} checklist)?`;
+  if (!confirm(msg)) return;
+
+  const origText = btnEl.textContent;
+  btnEl.disabled = true;
+  const total = plan.budgets.length + plan.checklists.length;
+  let done = 0;
+
+  try {
+    for (const b of plan.budgets) {
+      done += 1;
+      btnEl.textContent = `Menyimpan (${done}/${total})...`;
+      const res = await apiCall('upsertItem', {
+        module: 'budgets',
+        item: { ...b, actual: 0, paid: 0, status: 'Belum Bayar', notes: plan.name },
+      });
+      state.data.budgets.push(res.item);
+    }
+    for (const c of plan.checklists) {
+      done += 1;
+      btnEl.textContent = `Menyimpan (${done}/${total})...`;
+      const res = await apiCall('upsertItem', {
+        module: 'checklists',
+        item: { ...c, due_date: '', done: 'Belum' },
+      });
+      state.data.checklists.push(res.item);
+    }
+    renderAll();
+    showToast(`${plan.name} berhasil diterapkan! Silakan centang item yang sudah selesai.`);
+    switchTab('budgets');
+  } catch (err) {
+    showToast(err.message, true);
+  } finally {
+    btnEl.disabled = false;
+    btnEl.textContent = origText;
+  }
+};
 
 function statusBadge(text) {
   const map = {
@@ -407,15 +563,18 @@ function renderBudgets() {
   $('tbody-budgets').innerHTML = rows.length
     ? rows.map((b) => `
       <tr>
+        <td data-label="Sudah">
+          <input type="checkbox" ${b.status === 'Lunas' ? 'checked' : ''} onchange="toggleBudgetDone('${b.id}', this.checked)" />
+        </td>
         <td data-label="Kategori">${escapeHtml(b.category)}</td>
-        <td data-label="Item"><div><strong>${escapeHtml(b.item)}</strong>${b.notes ? `<div class="muted">${escapeHtml(b.notes)}</div>` : ''}</div></td>
+        <td data-label="Item"><div style="${b.status === 'Lunas' ? 'text-decoration:line-through;color:var(--muted)' : ''}"><strong>${escapeHtml(b.item)}</strong>${b.notes ? `<div class="muted">${escapeHtml(b.notes)}</div>` : ''}</div></td>
         <td data-label="Estimasi">${formatRp(b.estimated)}</td>
         <td data-label="Aktual">${formatRp(b.actual)}</td>
         <td data-label="Terbayar">${formatRp(b.paid)}</td>
         <td data-label="Status">${statusBadge(b.status)}</td>
         <td data-label="Aksi" class="td-actions">${actionButtons('budgets', b.id)}</td>
       </tr>`).join('')
-    : '<tr class="empty-row"><td colspan="7" class="muted">Belum ada data anggaran.</td></tr>';
+    : '<tr class="empty-row"><td colspan="8" class="muted">Belum ada data anggaran.</td></tr>';
 }
 
 function renderGuests() {
@@ -551,6 +710,25 @@ window.deleteRecord = async (module, id) => {
   }
 };
 
+window.toggleBudgetDone = async (id, checked) => {
+  const item = state.data.budgets.find((b) => b.id === id);
+  if (!item) return;
+  const updated = {
+    ...item,
+    status: checked ? 'Lunas' : 'Belum Bayar',
+    paid: checked ? (Number(item.paid) > 0 ? item.paid : (item.actual || item.estimated || 0)) : 0,
+  };
+  try {
+    const res = await apiCall('upsertItem', { module: 'budgets', item: updated });
+    const idx = state.data.budgets.findIndex((b) => b.id === id);
+    state.data.budgets[idx] = res.item;
+    renderAll();
+  } catch (err) {
+    showToast(err.message, true);
+    renderBudgets();
+  }
+};
+
 window.toggleChecklist = async (id, checked) => {
   const item = state.data.checklists.find((c) => c.id === id);
   if (!item) return;
@@ -566,7 +744,12 @@ window.toggleChecklist = async (id, checked) => {
   }
 };
 
-// --- Navigation ---
+// --- Navigation & Mobile Sidebar Drawer ---
+function setSidebarOpen(open) {
+  $('sidebar').classList.toggle('open', open);
+  $('sidebar-backdrop').classList.toggle('hidden', !open);
+}
+
 function switchTab(tab) {
   state.activeTab = tab;
   document.querySelectorAll('.nav-item').forEach((btn) => {
@@ -577,6 +760,7 @@ function switchTab(tab) {
   });
   const titles = {
     dashboard: 'Ringkasan',
+    plans: 'Rekomendasi Plan',
     budgets: 'Anggaran Pernikahan',
     guests: 'Daftar Tamu & RSVP',
     vendors: 'Manajemen Vendor',
@@ -584,7 +768,8 @@ function switchTab(tab) {
     rundowns: 'Rundown Acara',
     settings: 'Pengaturan',
   };
-  $('page-title').textContent = titles[tab] || 'NikahPlan';
+  $('page-title').textContent = titles[tab] || 'My Weeding Plan';
+  setSidebarOpen(false);
 }
 
 // --- Event Listeners ---
@@ -634,7 +819,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Navigation
+  // Navigation & Mobile Sidebar
+  $('btn-menu-toggle').addEventListener('click', () => setSidebarOpen(true));
+  $('btn-menu-close').addEventListener('click', () => setSidebarOpen(false));
+  $('sidebar-backdrop').addEventListener('click', () => setSidebarOpen(false));
   document.querySelectorAll('.nav-item').forEach((btn) => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
