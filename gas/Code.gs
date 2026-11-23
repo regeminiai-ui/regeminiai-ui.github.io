@@ -442,7 +442,11 @@ function handleUploadReceipt_(auth, payload) {
 
   const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, filename);
   const file = targetFolder.createFile(blob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Access.VIEW);
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (e) {
+    // Tetap lanjutkan jika folder membatasi perubahan sharing
+  }
 
   const now = new Date().toISOString();
   logActivity_(userId, 'UPLOAD_RECEIPT', payload.module || 'budgets', filename, actor, now);
