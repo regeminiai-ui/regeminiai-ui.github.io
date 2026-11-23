@@ -761,6 +761,7 @@ window.toggleChecklist = async (id, checked) => {
 function setSidebarOpen(open) {
   $('sidebar').classList.toggle('open', open);
   $('sidebar-backdrop').classList.toggle('hidden', !open);
+  document.body.classList.toggle('drawer-open', open);
 }
 
 function switchTab(tab) {
