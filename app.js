@@ -733,6 +733,7 @@ function renderPricingShowcase(pricingData) {
     const effectivePrice = hasPromo ? promoPrice : normalPrice;
     const customLabel = (cfg.promo_label || '').trim();
     const badgeText = customLabel || (hasPromo ? `Hemat ${discountPct}%` : t.defaultBadge);
+    const isBestSeller = /best\s*seller/i.test(badgeText);
 
     const priceHtml = hasPromo
       ? `
@@ -752,8 +753,8 @@ function renderPricingShowcase(pricingData) {
     const waUrl = `https://wa.me/6289509901360?text=${waMsg}`;
 
     return `
-      <div class="card pricing-card${t.featured ? ' featured' : ''}${hasPromo ? ' has-promo' : ''}">
-        ${badgeText ? `<div class="pricing-ribbon ${hasPromo || customLabel ? 'is-promo' : 'is-default'}">${escapeHtml(badgeText)}</div>` : ''}
+      <div class="card pricing-card${t.featured ? ' featured' : ''}${hasPromo ? ' has-promo' : ''}${isBestSeller ? ' is-best-seller' : ''}">
+        ${badgeText ? `<div class="pricing-ribbon ${isBestSeller ? 'is-best-seller' : (hasPromo || customLabel ? 'is-promo' : 'is-default')}">${escapeHtml(badgeText)}</div>` : ''}
         <div class="pricing-card-head">
           <div>
             <h4>${escapeHtml(t.name)}</h4>
