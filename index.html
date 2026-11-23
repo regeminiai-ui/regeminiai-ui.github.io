@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
   <link rel="icon" type="image/png" href="assets/img/logo-light.png" />
-  <link rel="stylesheet" href="styles.css?v=57" />
+  <link rel="stylesheet" href="styles.css?v=58" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -858,14 +858,16 @@
           </form>
 
           <form id="api-form" class="card form-stack">
-            <h3>Backup &amp; Koneksi Server</h3>
-            <p class="muted">Simpan cadangan data akun Anda dalam format JSON kapan saja.</p>
+            <h3>Backup Data Akun</h3>
+            <p class="muted">Simpan cadangan data akun Anda kapan saja sesuai paket aktif.</p>
             <div class="field hidden">
               <label for="set-api-url">URL Server</label>
               <input id="set-api-url" type="url" placeholder="https://..." />
             </div>
             <div class="btn-row">
               <button type="button" id="btn-export-json" class="btn btn-primary">Backup JSON</button>
+              <button type="button" id="btn-export-pdf" class="btn btn-outline hidden">Backup PDF</button>
+              <button type="button" id="btn-export-excel" class="btn btn-outline hidden">Backup Excel</button>
             </div>
           </form>
         </div>
@@ -926,7 +928,7 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="ai-planner.js?v=57"></script>
-  <script src="app.js?v=57"></script>
+  <script src="ai-planner.js?v=58"></script>
+  <script src="app.js?v=58"></script>
 </body>
 </html>

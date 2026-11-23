@@ -794,6 +794,7 @@ function renderPricingShowcase(pricingData) {
         'Rundown Acara & Tabungan / Cicilan',
         'Moodboard / Aset & Dark Mode',
         'Self Check-In Tamu (QR Umum)',
+        'Backup Laporan PDF',
       ],
     },
     {
@@ -806,6 +807,7 @@ function renderPricingShowcase(pricingData) {
         'Masa Aktif 13 Bulan (12 + 1 Bonus)',
         'Semua Fitur Medium',
         'Tema Eksklusif Neumorphism (Light & Dark)',
+        'Backup Laporan Excel & PDF',
         'Link QR & Undangan Personal per Tamu',
         'Tanpa Watermark di Halaman Check-In',
         'Custom Folder Google Drive Pribadi',
@@ -963,6 +965,8 @@ function getTierCaps() {
     cicilan: t !== 'sederhana',
     darkMode: t !== 'sederhana',
     glassTheme: t === 'rich' || t === 'konglo',
+    backupPdf: t !== 'sederhana',
+    backupExcel: t === 'rich' || t === 'konglo',
     qrGeneral: t !== 'sederhana',
     qrPersonal: t === 'rich' || t === 'konglo',
     customDrive: t === 'rich' || t === 'konglo',
@@ -1026,13 +1030,15 @@ function applyTierUi() {
     applyUiStyle(localStorage.getItem('nikahplan_ui_style') || 'default');
   }
   $('btn-show-qr')?.classList.toggle('hidden', !caps.qrGeneral);
+  $('btn-export-pdf')?.classList.toggle('hidden', !caps.backupPdf);
+  $('btn-export-excel')?.classList.toggle('hidden', !caps.backupExcel);
   document.querySelector('.activity-card')?.classList.toggle('hidden', !caps.auditLog);
   $('set-partner-email')?.closest('.field')?.classList.toggle('hidden', !caps.collab);
   $('set-drive-folder')?.closest('.field')?.classList.toggle('hidden', !caps.customDrive);
 
   // Read-only lock when expired or dummy preview
   const locked = expired || isDummyMode();
-  document.querySelectorAll('[data-add], #btn-reset-all, #profile-form button[type="submit"], #redeem-form button[type="submit"], #btn-export-json, #btn-show-qr').forEach((el) => {
+  document.querySelectorAll('[data-add], #btn-reset-all, #profile-form button[type="submit"], #redeem-form button[type="submit"], #btn-export-json, #btn-export-pdf, #btn-export-excel, #btn-show-qr').forEach((el) => {
     el.disabled = locked;
   });
 }
@@ -2451,6 +2457,62 @@ document.addEventListener('DOMContentLoaded', () => {
     a.href = URL.createObjectURL(blob);
     a.download = `nikahplan-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
+  });
+
+  function buildBackupReportHtml(forExcel = false) {
+    const u = state.user || {};
+    const d = state.data || {};
+    const tableStyle = forExcel
+      ? 'border="1" cellspacing="0" cellpadding="5"'
+      : 'style="width:100%;border-collapse:collapse;margin-bottom:18px;font-size:12px"';
+    const cellStyle = forExcel ? '' : 'style="border:1px solid #d1d5db;padding:6px 8px;text-align:left"';
+    const thStyle = forExcel ? '' : 'style="border:1px solid #d1d5db;padding:6px 8px;text-align:left;background:#f3f4f6"';
+    const mkTable = (title, cols, rows) => `
+      <h3>${escapeHtml(title)} (${rows.length})</h3>
+      <table ${tableStyle}>
+        <thead><tr>${cols.map((c) => `<th ${thStyle}>${escapeHtml(c)}</th>`).join('')}</tr></thead>
+        <tbody>${
+          rows.length
+            ? rows.map((r) => `<tr>${r.map((v) => `<td ${cellStyle}>${escapeHtml(String(v ?? ''))}</td>`).join('')}</tr>`).join('')
+            : `<tr><td colspan="${cols.length}" ${cellStyle}>Belum ada data.</td></tr>`
+        }</tbody>
+      </table>`;
+
+    const body = `
+      <h1>Laporan Pernikahan — ${escapeHtml(u.name || '')} &amp; ${escapeHtml(u.partner_name || '')}</h1>
+      <p>Tanggal Acara: ${escapeHtml(u.wedding_date ? formatDateId(u.wedding_date) : '-')} | Paket: ${escapeHtml(String(u.tier || '').toUpperCase())} | Diekspor: ${escapeHtml(new Date().toLocaleString('id-ID'))}</p>
+      ${mkTable('Anggaran', ['Kategori', 'Item', 'Estimasi', 'Aktual', 'Dibayar', 'Status', 'Catatan'], (d.budgets || []).map((b) => [b.category, b.item, b.estimated, b.actual, b.paid, b.status, b.notes]))}
+      ${mkTable('Daftar Tamu', ['Nama', 'Pihak', 'Grup', 'Pax', 'RSVP', 'No. HP', 'Catatan'], (d.guests || []).map((g) => [g.name, g.side, g.group, g.pax, g.rsvp, g.phone, g.notes]))}
+      ${mkTable('Vendor', ['Nama Vendor', 'Kategori', 'Kontak', 'Harga', 'DP', 'Status'], (d.vendors || []).map((v) => [v.name, v.category, v.contact, v.price, v.dp, v.status]))}
+      ${mkTable('Checklist', ['Fase', 'Tugas', 'PIC', 'Target', 'Status'], (d.checklists || []).map((c) => [c.phase, c.task, c.pic, c.due_date, c.done]))}
+      ${mkTable('Rundown', ['Waktu', 'Agenda', 'Lokasi', 'PIC', 'Catatan'], (d.rundowns || []).map((r) => [r.time, r.agenda, r.location, r.pic, r.notes]))}
+    `;
+    return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Backup My Weeding Plan</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#111}h1{margin:0 0 6px}h3{margin:18px 0 6px}</style></head><body>${body}</body></html>`;
+  }
+
+  $('btn-export-pdf')?.addEventListener('click', () => {
+    if (!getTierCaps().backupPdf) return;
+    const win = window.open('', '_blank');
+    if (!win) {
+      showToast('Pop-up diblokir browser. Izinkan pop-up untuk export PDF.', true);
+      return;
+    }
+    win.document.open();
+    win.document.write(buildBackupReportHtml(false));
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 300);
+  });
+
+  $('btn-export-excel')?.addEventListener('click', () => {
+    if (!getTierCaps().backupExcel) return;
+    const html = '\ufeff' + buildBackupReportHtml(true);
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `nikahplan-backup-${new Date().toISOString().slice(0, 10)}.xls`;
+    a.click();
+    showToast('Backup Excel (.xls) berhasil diunduh!');
   });
 
   $('btn-refresh').addEventListener('click', loadAllData);
