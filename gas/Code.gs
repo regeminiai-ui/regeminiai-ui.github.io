@@ -21,10 +21,11 @@ function doGet() {
   return jsonResponse({ ok: true, service: 'NikahPlan API', status: 'running' });
 }
 
-// Jalankan fungsi ini 1x dari editor Apps Script (klik Run) untuk memberi izin Google Drive
+// Jalankan fungsi ini 1x dari editor Apps Script (klik Run) untuk memberi izin tulis Google Drive
 function authorizeDrive() {
-  const root = DriveApp.getRootFolder();
-  Logger.log('Drive authorized: ' + root.getName());
+  const f = DriveApp.getRootFolder().createFile('_nikahplan_auth_test.txt', 'ok');
+  f.setTrashed(true);
+  Logger.log('Drive write authorized');
 }
 
 function doPost(e) {
