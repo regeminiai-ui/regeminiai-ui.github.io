@@ -349,20 +349,31 @@ h1, h2, h3, .brand-title {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 52% 48% 55% 45% / 45% 55% 48% 52%;
-  border: 2px solid var(--ink);
-  background: var(--primary);
-  color: #fff;
-  box-shadow: var(--shadow-sm);
   flex-shrink: 0;
 }
 
-.brand-mark .svg-icon {
-  width: 22px;
-  height: 22px;
-  fill: rgba(255, 255, 255, 0.2);
+.brand-logo {
+  display: block;
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+}
+
+.auth-brand .brand-logo {
+  height: 68px;
+  margin: 0 auto 6px;
+}
+
+.brand-logo-dark {
+  display: none;
+}
+
+[data-theme="dark"] .brand-logo-light {
+  display: none;
+}
+
+[data-theme="dark"] .brand-logo-dark {
+  display: block;
 }
 
 /* Auth */
