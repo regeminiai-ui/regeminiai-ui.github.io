@@ -690,9 +690,26 @@ tr:last-child td {
   gap: 10px;
 }
 
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dash-check-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
 .mini-list li {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   padding-bottom: 8px;
   border-bottom: 1px dashed var(--border);

@@ -366,6 +366,33 @@ function normalizeDateStr(val) {
   return `${y}-${m}-${day}`;
 }
 
+function formatDateId(val) {
+  const iso = normalizeDateStr(val);
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(d);
+}
+
+function formatTimeId(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^\d{2}:\d{2}/.test(s)) {
+    return s.slice(0, 5).replace(':', '.');
+  }
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}.${mm}`;
+  }
+  return s;
+}
+
 function renderUserHeader() {
   const u = state.user;
   const dateStr = normalizeDateStr(u.wedding_date);
@@ -377,13 +404,14 @@ function renderUserHeader() {
 
   const cd = $('wedding-countdown');
   if (dateStr) {
+    const prettyDate = formatDateId(dateStr);
     const target = new Date(dateStr + 'T00:00:00');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-    if (diffDays > 0) cd.textContent = `H-${diffDays} menuju hari bahagia (${dateStr})`;
+    if (diffDays > 0) cd.textContent = `H-${diffDays} menuju hari bahagia (${prettyDate})`;
     else if (diffDays === 0) cd.textContent = 'Hari ini adalah Hari Pernikahan Anda!';
-    else cd.textContent = `Tanggal pernikahan: ${dateStr}`;
+    else cd.textContent = `Tanggal pernikahan: ${prettyDate}`;
   } else {
     cd.textContent = 'Atur tanggal pernikahan di Pengaturan';
   }
@@ -725,14 +753,31 @@ function renderDashboard() {
   $('stat-checklist-pct').textContent = `${pct}%`;
   $('stat-checklist-count').textContent = `${doneCount} / ${checklists.length} selesai`;
 
-  const pendingTasks = checklists.filter((c) => c.done !== 'Selesai').slice(0, 5);
-  $('dash-checklist').innerHTML = pendingTasks.length
-    ? pendingTasks.map((c) => `<li><span>${escapeHtml(c.task)}</span><span class="muted">${escapeHtml(c.phase)}</span></li>`).join('')
-    : '<li class="muted">Belum ada tugas tertunda.</li>';
+  const sortedChecklist = [...checklists].sort((a, b) => {
+    const aDone = a.done === 'Selesai' ? 1 : 0;
+    const bDone = b.done === 'Selesai' ? 1 : 0;
+    return aDone - bDone;
+  });
+  $('dash-checklist').innerHTML = sortedChecklist.length
+    ? sortedChecklist.map((c) => {
+        const isDone = c.done === 'Selesai';
+        return `
+          <li>
+            <span style="${isDone ? 'text-decoration:line-through;color:var(--muted)' : ''}">
+              ${escapeHtml(c.task)}
+              <small class="muted">(${escapeHtml(c.phase)})</small>
+            </span>
+            <label class="dash-check-right">
+              <span class="badge ${isDone ? 'badge-ok' : 'badge-neutral'}">${isDone ? 'Sudah' : 'Belum'}</span>
+              <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleChecklist('${c.id}', this.checked)" />
+            </label>
+          </li>`;
+      }).join('')
+    : '<li class="muted">Belum ada tugas checklist.</li>';
 
-  const sortedRundown = [...rundowns].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '')).slice(0, 5);
+  const sortedRundown = [...rundowns].sort((a, b) => formatTimeId(a.start_time).localeCompare(formatTimeId(b.start_time))).slice(0, 5);
   $('dash-rundown').innerHTML = sortedRundown.length
-    ? sortedRundown.map((r) => `<li><span>${escapeHtml(r.start_time)} - ${escapeHtml(r.activity)}</span><span class="muted">${escapeHtml(r.event_name)}</span></li>`).join('')
+    ? sortedRundown.map((r) => `<li><span>${escapeHtml(formatTimeId(r.start_time))} WIB - ${escapeHtml(r.activity)}</span><span class="muted">${escapeHtml(r.event_name)}</span></li>`).join('')
     : '<li class="muted">Belum ada jadwal rundown.</li>';
 }
 
@@ -746,10 +791,12 @@ function actionButtons(module, id) {
 function renderBudgets() {
   const q = $('filter-budget-search').value.toLowerCase();
   const st = $('filter-budget-status').value;
-  const rows = state.data.budgets.filter((b) =>
-    (!q || (b.item + ' ' + b.category).toLowerCase().includes(q)) &&
-    (!st || b.status === st)
-  );
+  const rows = state.data.budgets
+    .filter((b) =>
+      (!q || (b.item + ' ' + b.category).toLowerCase().includes(q)) &&
+      (!st || b.status === st)
+    )
+    .sort((a, b) => (a.status === 'Lunas' ? 1 : 0) - (b.status === 'Lunas' ? 1 : 0));
   $('tbody-budgets').innerHTML = rows.length
     ? rows.map((b) => `
       <tr>
@@ -812,19 +859,27 @@ function renderVendors() {
 
 function renderChecklists() {
   const phase = $('filter-checklist-phase').value;
-  const rows = state.data.checklists.filter((c) => !phase || c.phase === phase);
+  const rows = state.data.checklists
+    .filter((c) => !phase || c.phase === phase)
+    .sort((a, b) => (a.done === 'Selesai' ? 1 : 0) - (b.done === 'Selesai' ? 1 : 0));
   $('tbody-checklists').innerHTML = rows.length
-    ? rows.map((c) => `
-      <tr>
-        <td data-label="Selesai">
-          <input type="checkbox" ${c.done === 'Selesai' ? 'checked' : ''} onchange="toggleChecklist('${c.id}', this.checked)" />
-        </td>
-        <td data-label="Tahap">${escapeHtml(c.phase)}</td>
-        <td data-label="Tugas" style="${c.done === 'Selesai' ? 'text-decoration:line-through;color:var(--muted)' : ''}">${escapeHtml(c.task)}</td>
-        <td data-label="PIC">${escapeHtml(c.pic || '-')}</td>
-        <td data-label="Target">${escapeHtml(c.due_date || '-')}</td>
-        <td data-label="Aksi" class="td-actions">${actionButtons('checklists', c.id)}</td>
-      </tr>`).join('')
+    ? rows.map((c) => {
+        const isDone = c.done === 'Selesai';
+        return `
+          <tr>
+            <td data-label="Tahap">${escapeHtml(c.phase)}</td>
+            <td data-label="Tugas" style="${isDone ? 'text-decoration:line-through;color:var(--muted)' : ''}">${escapeHtml(c.task)}</td>
+            <td data-label="PIC">${escapeHtml(c.pic || '-')}</td>
+            <td data-label="Target">${escapeHtml(formatDateId(c.due_date) || '-')}</td>
+            <td data-label="Status">
+              <label class="dash-check-right">
+                <span class="badge ${isDone ? 'badge-ok' : 'badge-neutral'}">${isDone ? 'Sudah' : 'Belum'}</span>
+                <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleChecklist('${c.id}', this.checked)" />
+              </label>
+            </td>
+            <td data-label="Aksi" class="td-actions">${actionButtons('checklists', c.id)}</td>
+          </tr>`;
+      }).join('')
     : '<tr class="empty-row"><td colspan="6" class="muted">Belum ada tugas checklist.</td></tr>';
 }
 
@@ -832,12 +887,12 @@ function renderRundowns() {
   const ev = $('filter-rundown-event').value;
   const rows = state.data.rundowns
     .filter((r) => !ev || r.event_name === ev)
-    .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+    .sort((a, b) => formatTimeId(a.start_time).localeCompare(formatTimeId(b.start_time)));
   $('tbody-rundowns').innerHTML = rows.length
     ? rows.map((r) => `
       <tr>
         <td data-label="Sesi">${escapeHtml(r.event_name)}</td>
-        <td data-label="Waktu">${escapeHtml(r.start_time)} - ${escapeHtml(r.end_time)}</td>
+        <td data-label="Waktu">${escapeHtml(formatTimeId(r.start_time))} - ${escapeHtml(formatTimeId(r.end_time))} WIB</td>
         <td data-label="Kegiatan"><strong>${escapeHtml(r.activity)}</strong></td>
         <td data-label="PIC">${escapeHtml(r.pic || '-')}</td>
         <td data-label="Lokasi">${escapeHtml(r.location || '-')}</td>
@@ -1300,7 +1355,7 @@ async function initCheckinView(userId) {
   try {
     const info = await apiCall('publicEventInfo', { user_id: userId });
     $('checkin-couple').textContent = `${info.name} & ${info.partner_name}`;
-    const dateStr = normalizeDateStr(info.wedding_date);
+    const dateStr = formatDateId(info.wedding_date);
     $('checkin-date').textContent = dateStr ? `Buku Tamu • ${dateStr}` : 'Buku Tamu Pernikahan';
   } catch (err) {
     showToast(err.message, true);
