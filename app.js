@@ -35,9 +35,9 @@ const MODULE_SCHEMAS = {
     fields: [
       { key: 'category', label: 'Kategori', type: 'select', options: ['Venue & Dekorasi', 'Catering', 'Busana & MUA', 'Dokumentasi', 'Undangan & Souvenir', 'KUA / Penghulu', 'Lainnya'], required: true },
       { key: 'item', label: 'Nama Item', type: 'text', required: true },
-      { key: 'estimated', label: 'Estimasi (Rp)', type: 'number', min: 0, default: 0 },
-      { key: 'actual', label: 'Biaya Aktual (Rp)', type: 'number', min: 0, default: 0 },
-      { key: 'paid', label: 'Sudah Dibayar (Rp)', type: 'number', min: 0, default: 0 },
+      { key: 'estimated', label: 'Estimasi (Rp)', type: 'currency', default: 0 },
+      { key: 'actual', label: 'Biaya Aktual (Rp)', type: 'currency', default: 0 },
+      { key: 'paid', label: 'Sudah Dibayar (Rp)', type: 'currency', default: 0 },
       { key: 'status', label: 'Status Pembayaran', type: 'select', options: ['Belum Bayar', 'DP', 'Lunas'], default: 'Belum Bayar' },
       { key: 'notes', label: 'Catatan', type: 'text' },
     ],
@@ -61,8 +61,8 @@ const MODULE_SCHEMAS = {
       { key: 'name', label: 'Nama Vendor', type: 'text', required: true },
       { key: 'pic', label: 'Nama PIC', type: 'text' },
       { key: 'phone', label: 'Kontak / IG', type: 'text' },
-      { key: 'price', label: 'Harga Paket (Rp)', type: 'number', min: 0, default: 0 },
-      { key: 'dp_paid', label: 'DP Terbayar (Rp)', type: 'number', min: 0, default: 0 },
+      { key: 'price', label: 'Harga Paket (Rp)', type: 'currency', default: 0 },
+      { key: 'dp_paid', label: 'DP Terbayar (Rp)', type: 'currency', default: 0 },
       { key: 'status', label: 'Status', type: 'select', options: ['Survey', 'Deal', 'Lunas', 'Batal'], default: 'Survey' },
       { key: 'notes', label: 'Catatan', type: 'text' },
     ],
@@ -94,8 +94,19 @@ const MODULE_SCHEMAS = {
 // --- Utilities ---
 const $ = (id) => document.getElementById(id);
 
+function formatNumberComma(num) {
+  const clean = String(num ?? '').replace(/[^\d]/g, '');
+  if (!clean) return '0';
+  return Number(clean).toLocaleString('en-US');
+}
+
+function parseCurrency(val) {
+  const clean = String(val ?? '').replace(/[^\d]/g, '');
+  return clean ? Number(clean) : 0;
+}
+
 function formatRp(num) {
-  return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+  return 'Rp ' + Number(num || 0).toLocaleString('en-US');
 }
 
 function escapeHtml(str) {
@@ -708,8 +719,19 @@ function openModal(module, existingItem = null) {
       const opts = f.options.map((o) => `<option value="${escapeHtml(o)}" ${val === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
       return `<div class="field"><label>${escapeHtml(f.label)}</label><select name="${f.key}" ${f.required ? 'required' : ''}>${opts}</select></div>`;
     }
+    if (f.type === 'currency') {
+      const formatted = formatNumberComma(val);
+      return `<div class="field"><label>${escapeHtml(f.label)}</label><input type="text" inputmode="numeric" data-currency="1" name="${f.key}" value="${escapeHtml(formatted)}" ${f.required ? 'required' : ''} /></div>`;
+    }
     return `<div class="field"><label>${escapeHtml(f.label)}</label><input type="${f.type}" name="${f.key}" value="${escapeHtml(val)}" ${f.min !== undefined ? `min="${f.min}"` : ''} ${f.required ? 'required' : ''} /></div>`;
   }).join('');
+
+  $('modal-fields').querySelectorAll('input[data-currency="1"]').forEach((inp) => {
+    inp.addEventListener('input', () => {
+      const digits = inp.value.replace(/[^\d]/g, '');
+      inp.value = digits ? Number(digits).toLocaleString('en-US') : '';
+    });
+  });
 
   document.querySelector('#modal-form .modal-actions').classList.remove('hidden');
   $('modal-backdrop').classList.remove('hidden');
@@ -906,6 +928,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (ctx?.type === 'crud') {
       const item = Object.fromEntries(formData.entries());
+      MODULE_SCHEMAS[ctx.module].fields.forEach((f) => {
+        if (f.type === 'currency') {
+          item[f.key] = parseCurrency(item[f.key]);
+        }
+      });
       if (ctx.id) item.id = ctx.id;
       try {
         const res = await apiCall('upsertItem', { module: ctx.module, item });
@@ -961,6 +988,9 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-refresh').addEventListener('click', loadAllData);
   $('btn-logout').addEventListener('click', () => logout(true));
 
+  initTheme();
+  $('btn-theme-toggle').addEventListener('click', toggleTheme);
+
   const checkinUserId = new URLSearchParams(window.location.search).get('checkin');
   if (checkinUserId) {
     initCheckinView(checkinUserId);
@@ -968,6 +998,25 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAuthOrApp();
   }
 });
+
+function applyTheme(theme) {
+  const isDark = theme === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  const lbl = $('theme-toggle-label');
+  if (lbl) lbl.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('nikahplan_theme') || 'light';
+  applyTheme(saved);
+}
+
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('nikahplan_theme', next);
+  applyTheme(next);
+}
 
 function getCheckinUrl() {
   const base = window.location.origin + window.location.pathname;

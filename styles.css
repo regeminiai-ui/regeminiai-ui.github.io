@@ -17,6 +17,50 @@
   --shadow-sm: 2px 3px 0 #382b26;
 }
 
+[data-theme="dark"] {
+  --bg: #1c1716;
+  --surface: #27201e;
+  --surface-alt: #342b28;
+  --text: #f3eadc;
+  --muted: #b5a79a;
+  --ink: #e4d6c3;
+  --primary: #d17480;
+  --primary-hover: #b85d69;
+  --accent: #6ea378;
+  --danger: #e06c6c;
+  --border: #e4d6c3;
+  --border-soft: #594b45;
+  --shadow: 3px 4px 0 #0b0908;
+  --shadow-sm: 2px 3px 0 #0b0908;
+}
+
+[data-theme="dark"] body {
+  background-image: radial-gradient(#382e2b 1px, transparent 1px);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: #1e1817;
+  color: var(--text);
+}
+
+[data-theme="dark"] .nav-item.active {
+  background: #3d2529;
+  color: #f09aa5;
+}
+
+[data-theme="dark"] .badge-ok { background: #213b27; color: #9ad4a4; }
+[data-theme="dark"] .badge-warn { background: #3f3118; color: #f0cb7a; }
+[data-theme="dark"] .badge-bad { background: #422020; color: #f29b9b; }
+[data-theme="dark"] .btn-danger { background: #422020; color: #f29b9b; }
+
+@media (max-width: 820px) {
+  [data-theme="dark"] .topbar {
+    background: rgba(28, 23, 22, 0.92);
+  }
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -171,6 +215,7 @@ h1, h2, h3, .brand-title {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .field label {
@@ -180,6 +225,8 @@ h1, h2, h3, .brand-title {
 
 input, select, textarea {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 10px 12px;
   border: 2px solid var(--ink);
   border-radius: var(--radius-sm);
@@ -187,6 +234,13 @@ input, select, textarea {
   font-size: 0.92rem;
   background: #fff;
   color: var(--text);
+}
+
+input[type="date"],
+input[type="time"] {
+  display: block;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 input:focus, select:focus, textarea:focus {
@@ -504,6 +558,8 @@ input:focus, select:focus, textarea:focus {
   border-radius: var(--radius);
   padding: 20px;
   box-shadow: var(--shadow);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .card-header {
