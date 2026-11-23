@@ -271,6 +271,12 @@ input:focus, select:focus, textarea:focus {
   box-shadow: none;
 }
 
+.btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .btn-primary {
   background: var(--primary);
   color: #fff;
@@ -757,16 +763,33 @@ tr:last-child td {
 }
 
 .toast {
-  background: var(--text);
-  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #e6f2e7;
+  color: #214a26;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
   padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 0.88rem;
-  box-shadow: var(--shadow);
+  font-family: 'Patrick Hand', 'Plus Jakarta Sans', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .toast.error {
-  background: var(--danger);
+  background: #fde8e8;
+  color: #8c2020;
+}
+
+[data-theme="dark"] .toast {
+  background: #213b27;
+  color: #b7e6bf;
+}
+
+[data-theme="dark"] .toast.error {
+  background: #422020;
+  color: #f5b3b3;
 }
 
 /* QR Check-in */

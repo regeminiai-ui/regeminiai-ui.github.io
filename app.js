@@ -121,9 +121,25 @@ function showToast(msg, isError = false) {
   const container = $('toast-container');
   const el = document.createElement('div');
   el.className = `toast ${isError ? 'error' : ''}`;
-  el.textContent = msg;
+  const icon = isError
+    ? '<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>'
+    : '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
+  el.innerHTML = `${icon}<span>${escapeHtml(msg)}</span>`;
   container.appendChild(el);
   setTimeout(() => el.remove(), 3500);
+}
+
+async function withButtonLock(btn, loadingText, fn) {
+  if (!btn || btn.disabled) return;
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  if (loadingText) btn.textContent = loadingText;
+  try {
+    await fn();
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+  }
 }
 
 function isDemoMode() {
@@ -463,27 +479,92 @@ const WEDDING_PLANS = [
     ],
   },
   {
-    id: 'adat',
-    name: 'Plan Adat Tradisional (Gedung)',
+    id: 'adat-jawa',
+    name: 'Plan Adat Jawa (Solo / Yogya)',
     badge: '300–500 Tamu',
-    summary: 'Paket gedung/aula serbaguna dengan pakem adat daerah (Jawa/Sunda/Minang/Batak/Bugis), prosesi adat lengkap, dan tim WO.',
+    summary: 'Pernikahan pakem Jawa Tengah / DIY: Siraman, Midodareni, Ijab, Upacara Panggih (Balangan Gantal, Wijik Dadi, Kacar-Kucur, Sungkeman) & Paes Ageng / Solo Putri.',
     budgets: [
-      { category: 'Venue & Dekorasi', item: 'Gedung/Aula Instansi + Pelaminan Adat & Mini Garden', estimated: 32000000 },
-      { category: 'Catering', item: 'Buffet Nusantara 400 pax + 3 Gubukan Favorit', estimated: 42000000 },
-      { category: 'Busana & MUA', item: 'Rias Paes/Siger/Suntiang, Busana Pengantin, Ortu & Among Tamu', estimated: 16000000 },
-      { category: 'Dokumentasi', item: 'Foto & Video Liputan Adat + Album Kolase', estimated: 9000000 },
-      { category: 'Lainnya', item: 'WO Hari-H, MC Adat, Cucuk Lampah/Tarian & Charge Gedung', estimated: 10000000 },
-      { category: 'Undangan & Souvenir', item: 'Undangan Cetak/Digital & Souvenir 400 pcs', estimated: 4500000 },
-      { category: 'KUA / Penghulu', item: 'Administrasi KUA & Perlengkapan Prosesi Adat', estimated: 1500000 },
+      { category: 'Venue & Dekorasi', item: 'Gedung/Pendopo + Gebyok Pelaminan Jawa & Janur', estimated: 35000000 },
+      { category: 'Catering', item: 'Buffet Jawa 400 pax + Gubukan (Soto, Tengkleng, Es Dawet)', estimated: 44000000 },
+      { category: 'Busana & MUA', item: 'Rias Paes Ageng / Solo Putri, Beskap, Ortu & Among Tamu', estimated: 18000000 },
+      { category: 'Lainnya', item: 'WO Adat, MC Bahasa Jawa, Cucuk Lampah & Gamelan/Karawitan', estimated: 12000000 },
+      { category: 'Dokumentasi', item: 'Foto & Video Liputan Siraman, Midodareni, Akad & Panggih', estimated: 10000000 },
+      { category: 'Undangan & Souvenir', item: 'Undangan Batik/Digital & Souvenir 400 pcs', estimated: 4500000 },
+      { category: 'KUA / Penghulu', item: 'Administrasi KUA & Perlengkapan Ubo Rampe Panggih', estimated: 1500000 },
     ],
     checklists: [
-      { phase: 'H-6 Bulan', task: 'Booking gedung/aula & cek daftar vendor catering rekanan', pic: 'Calon Pengantin' },
-      { phase: 'H-6 Bulan', task: 'Pilih perias/WO yang berpengalaman dengan pakem adat daerah', pic: 'Keluarga' },
-      { phase: 'H-3 Bulan', task: 'Food tasting catering & tentukan susunan prosesi adat', pic: 'WO / Keluarga' },
-      { phase: 'H-3 Bulan', task: 'Fitting busana adat pengantin, orang tua & among tamu', pic: 'MUA / Keluarga' },
-      { phase: 'H-1 Bulan', task: 'Urus berkas KUA & distribusi undangan fisik/digital', pic: 'Calon Pengantin' },
-      { phase: 'H-1 Minggu', task: 'Technical meeting besar (gedung, WO, MC adat & seluruh vendor)', pic: 'WO' },
-      { phase: 'Hari-H', task: 'Briefing pagar betis, penerima tamu & prosesi adat lengkap', pic: 'WO' },
+      { phase: 'H-6 Bulan', task: 'Booking gedung/pendopo & perias spesialis Paes Jawa', pic: 'Calon Pengantin' },
+      { phase: 'H-3 Bulan', task: 'Siapkan ubo rampe Siraman, Kembar Mayang & Upacara Panggih', pic: 'Keluarga / WO' },
+      { phase: 'H-3 Bulan', task: 'Booking MC Adat Jawa, Cucuk Lampah & iringan Gamelan', pic: 'WO' },
+      { phase: 'H-1 Bulan', task: 'Fitting kebaya/beskap pengantin, orang tua & among tamu', pic: 'MUA / Keluarga' },
+      { phase: 'H-1 Minggu', task: 'Technical meeting prosesi Siraman, Midodareni & Panggih', pic: 'WO' },
+      { phase: 'Hari-H', task: 'Jalankan Siraman, Midodareni, Ijab & Upacara Panggih lengkap', pic: 'WO / MC Adat' },
+    ],
+  },
+  {
+    id: 'adat-sunda',
+    name: 'Plan Adat Sunda (Siger)',
+    badge: '300–500 Tamu',
+    summary: 'Pernikahan adat Sunda Jawa Barat dengan rias Siger Sunda, prosesi Ngeuyeuk Seureuh, Saweran, Meuleum Harupat, Nincak Endog & Huap Lingkung.',
+    budgets: [
+      { category: 'Venue & Dekorasi', item: 'Gedung/Aula + Pelaminan Sunda & Dekorasi Bunga Melati', estimated: 30000000 },
+      { category: 'Catering', item: 'Buffet 400 pax + Stall Khas Sunda (Empal Gentong, Siomay, Batagor)', estimated: 40000000 },
+      { category: 'Busana & MUA', item: 'Rias Siger Sunda, Kebaya/Beskap, Orang Tua & Pagar Ayu', estimated: 15000000 },
+      { category: 'Lainnya', item: 'WO Adat Sunda, MC, Mapag Panganten & Kacapi Suling', estimated: 10000000 },
+      { category: 'Dokumentasi', item: 'Foto & Video Prosesi Ngeuyeuk Seureuh, Akad & Saweran', estimated: 9000000 },
+      { category: 'Undangan & Souvenir', item: 'Undangan Cetak/Digital & Souvenir 400 pcs', estimated: 4500000 },
+      { category: 'KUA / Penghulu', item: 'Administrasi KUA & Perlengkapan Saweran/Harupat/Endog', estimated: 1500000 },
+    ],
+    checklists: [
+      { phase: 'H-6 Bulan', task: 'Booking gedung/aula & MUA spesialis Siger Sunda', pic: 'Calon Pengantin' },
+      { phase: 'H-3 Bulan', task: 'Booking tim Mapag Panganten (Lengser) & Kacapi Suling', pic: 'WO' },
+      { phase: 'H-1 Bulan', task: 'Siapkan perlengkapan Ngeuyeuk Seureuh & Saweran (beras, koin, harupat)', pic: 'Keluarga' },
+      { phase: 'H-1 Minggu', task: 'Technical meeting bersama MC Adat Sunda & semua vendor', pic: 'WO' },
+      { phase: 'Hari-H', task: 'Jalankan Ijab, Saweran, Meuleum Harupat, Nincak Endog & Huap Lingkung', pic: 'WO / MC Adat' },
+    ],
+  },
+  {
+    id: 'adat-betawi',
+    name: 'Plan Adat Betawi (Palang Pintu)',
+    badge: '300–500 Tamu',
+    summary: 'Pernikahan adat Betawi (Jakarta) dengan busana Dandanan Care None Pengantin Cine, tradisi Palang Pintu (silat & pantun), Roti Buaya & Tanjidor.',
+    budgets: [
+      { category: 'Venue & Dekorasi', item: 'Gedung/Aula + Pelaminan Betawi & Kembang Kelapa', estimated: 28000000 },
+      { category: 'Catering', item: 'Buffet 350 pax + Stall Betawi (Soto Betawi, Kerak Telor, Es Selendang Mayang)', estimated: 38000000 },
+      { category: 'Busana & MUA', item: 'Rias Care None Pengantin Cine, Busana Pengantin & Keluarga', estimated: 15000000 },
+      { category: 'Lainnya', item: 'Tim Palang Pintu (Silat & Pantun), Tanjidor/Gambang Kromong & WO', estimated: 10000000 },
+      { category: 'Dokumentasi', item: 'Foto & Video Liputan Palang Pintu & Resepsi', estimated: 8500000 },
+      { category: 'Undangan & Souvenir', item: 'Undangan & Souvenir 350 pcs', estimated: 4000000 },
+      { category: 'KUA / Penghulu', item: 'Administrasi KUA, Sepasang Roti Buaya & Seserahan Betawi', estimated: 2500000 },
+    ],
+    checklists: [
+      { phase: 'H-6 Bulan', task: 'Booking gedung/aula & sanggar Palang Pintu + Tanjidor', pic: 'Calon Pengantin' },
+      { phase: 'H-3 Bulan', task: 'Booking MUA spesialis rias Betawi & food tasting catering', pic: 'Calon Pengantin' },
+      { phase: 'H-1 Bulan', task: 'Pesan sepasang Roti Buaya segar & siapkan seserahan khas Betawi', pic: 'Keluarga Pria' },
+      { phase: 'H-1 Minggu', task: 'Technical meeting alur penyambutan Palang Pintu & rundown acara', pic: 'WO' },
+      { phase: 'Hari-H', task: 'Prosesi Buka Palang Pintu, Akad Nikah & Resepsi Betawi', pic: 'WO / Sanggar' },
+    ],
+  },
+  {
+    id: 'adat-nusantara',
+    name: 'Plan Adat Nusantara (Minang/Batak/Bugis)',
+    badge: '300–500 Tamu',
+    summary: 'Pilihan adat luar Jawa: Minang (Suntiang & Malam Bainai), Batak (Ulos & Sinamot), Bugis-Makassar (Baju Bodo & Mappacci), atau Melayu (Tepung Tawar).',
+    budgets: [
+      { category: 'Venue & Dekorasi', item: 'Gedung/Aula + Pelaminan Adat Nusantara (Bagonjong/Batak/Bugis)', estimated: 35000000 },
+      { category: 'Catering', item: 'Buffet 450 pax + Masakan Khas Daerah', estimated: 48000000 },
+      { category: 'Busana & MUA', item: 'Rias Adat (Suntiang/Baju Bodo/Sortali) + Busana Keluarga', estimated: 18000000 },
+      { category: 'Lainnya', item: 'WO Adat, Tarian Penyambutan (Tari Piring/Tor-Tor/Padduppa) & MC', estimated: 12000000 },
+      { category: 'Dokumentasi', item: 'Foto & Video Prosesi Pra-Nikah Adat (Malam Bainai/Mappacci) & Resepsi', estimated: 11000000 },
+      { category: 'Undangan & Souvenir', item: 'Undangan Cetak/Digital & Souvenir 450 pcs', estimated: 5000000 },
+      { category: 'KUA / Penghulu', item: 'Administrasi KUA/Catatan Sipil & Perlengkapan Adat (Ulos/Bainai)', estimated: 3000000 },
+    ],
+    checklists: [
+      { phase: 'H-6 Bulan', task: 'Musyawarah keluarga besar tentang pakem adat & gedung', pic: 'Keluarga' },
+      { phase: 'H-3 Bulan', task: 'Booking MUA spesialis adat, sanggar tari & pemusik daerah', pic: 'WO' },
+      { phase: 'H-1 Bulan', task: 'Siapkan perlengkapan prosesi pra-nikah (Malam Bainai / Mappacci / Ulos)', pic: 'Keluarga' },
+      { phase: 'H-1 Minggu', task: 'Technical meeting prosesi adat bersama tetua adat & WO', pic: 'WO' },
+      { phase: 'Hari-H', task: 'Jalankan prosesi adat lengkap, tarian penyambutan & resepsi', pic: 'WO / Tetua Adat' },
     ],
   },
   {
@@ -895,38 +976,44 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Login submit
-  $('login-form').addEventListener('submit', async (e) => {
+  $('login-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    try {
-      const res = await apiCall('login', {
-        email: $('login-email').value,
-        password: $('login-password').value,
-      });
-      saveSession(res.token, res.user);
-      renderAuthOrApp();
-      showToast('Berhasil masuk!');
-    } catch (err) {
-      showToast(err.message, true);
-    }
+    const btn = e.target.querySelector('button[type="submit"]');
+    withButtonLock(btn, 'Memproses...', async () => {
+      try {
+        const res = await apiCall('login', {
+          email: $('login-email').value,
+          password: $('login-password').value,
+        });
+        saveSession(res.token, res.user);
+        renderAuthOrApp();
+        showToast('Berhasil masuk!');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
   });
 
   // Register submit
-  $('register-form').addEventListener('submit', async (e) => {
+  $('register-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    try {
-      const res = await apiCall('register', {
-        name: $('reg-name').value,
-        partner_name: $('reg-partner').value,
-        wedding_date: $('reg-date').value,
-        email: $('reg-email').value,
-        password: $('reg-password').value,
-      });
-      saveSession(res.token, res.user);
-      renderAuthOrApp();
-      showToast('Akun berhasil dibuat!');
-    } catch (err) {
-      showToast(err.message, true);
-    }
+    const btn = e.target.querySelector('button[type="submit"]');
+    withButtonLock(btn, 'Mendaftar...', async () => {
+      try {
+        const res = await apiCall('register', {
+          name: $('reg-name').value,
+          partner_name: $('reg-partner').value,
+          wedding_date: $('reg-date').value,
+          email: $('reg-email').value,
+          password: $('reg-password').value,
+        });
+        saveSession(res.token, res.user);
+        renderAuthOrApp();
+        showToast('Akun berhasil dibuat!');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
   });
 
   // Navigation & Mobile Sidebar
@@ -958,7 +1045,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-open-api-config').addEventListener('click', openApiConfigModal);
   $('btn-show-qr').addEventListener('click', openGuestQrModal);
 
-  $('modal-form').addEventListener('submit', async (e) => {
+  $('modal-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const ctx = state.modalContext;
@@ -973,46 +1060,52 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (ctx?.type === 'crud') {
-      const item = Object.fromEntries(formData.entries());
-      MODULE_SCHEMAS[ctx.module].fields.forEach((f) => {
-        if (f.type === 'currency') {
-          item[f.key] = parseCurrency(item[f.key]);
+      const btn = e.target.querySelector('button[type="submit"]');
+      withButtonLock(btn, 'Menyimpan...', async () => {
+        const item = Object.fromEntries(formData.entries());
+        MODULE_SCHEMAS[ctx.module].fields.forEach((f) => {
+          if (f.type === 'currency') {
+            item[f.key] = parseCurrency(item[f.key]);
+          }
+        });
+        if (ctx.id) item.id = ctx.id;
+        try {
+          const res = await apiCall('upsertItem', { module: ctx.module, item });
+          const list = state.data[ctx.module];
+          if (ctx.id) {
+            const idx = list.findIndex((r) => r.id === ctx.id);
+            if (idx !== -1) list[idx] = res.item;
+          } else {
+            list.push(res.item);
+          }
+          renderAll();
+          closeModal();
+          showToast('Data tersimpan.');
+        } catch (err) {
+          showToast(err.message, true);
         }
       });
-      if (ctx.id) item.id = ctx.id;
-      try {
-        const res = await apiCall('upsertItem', { module: ctx.module, item });
-        const list = state.data[ctx.module];
-        if (ctx.id) {
-          const idx = list.findIndex((r) => r.id === ctx.id);
-          if (idx !== -1) list[idx] = res.item;
-        } else {
-          list.push(res.item);
-        }
-        renderAll();
-        closeModal();
-        showToast('Data tersimpan.');
-      } catch (err) {
-        showToast(err.message, true);
-      }
     }
   });
 
   // Settings forms
-  $('profile-form').addEventListener('submit', async (e) => {
+  $('profile-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    try {
-      const res = await apiCall('updateProfile', {
-        name: $('set-name').value,
-        partner_name: $('set-partner').value,
-        wedding_date: $('set-date').value,
-      });
-      saveSession(state.token, res.user);
-      renderUserHeader();
-      showToast('Profil diperbarui.');
-    } catch (err) {
-      showToast(err.message, true);
-    }
+    const btn = e.target.querySelector('button[type="submit"]');
+    withButtonLock(btn, 'Menyimpan...', async () => {
+      try {
+        const res = await apiCall('updateProfile', {
+          name: $('set-name').value,
+          partner_name: $('set-partner').value,
+          wedding_date: $('set-date').value,
+        });
+        saveSession(state.token, res.user);
+        renderUserHeader();
+        showToast('Profil diperbarui.');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
   });
 
   $('api-form').addEventListener('submit', (e) => {
