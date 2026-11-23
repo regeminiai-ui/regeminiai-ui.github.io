@@ -663,10 +663,10 @@ function renderPricingShowcase(pricingData) {
   const bannerEl = $('pricing-promo-banner');
   if (bannerEl) {
     if (p.promo_banner && p.promo_banner.trim()) {
-      bannerEl.textContent = p.promo_banner.trim();
+      bannerEl.innerHTML = `<span class="promo-banner-icon">&#10024;</span> <span>${escapeHtml(p.promo_banner.trim())}</span>`;
       bannerEl.classList.remove('hidden');
     } else {
-      bannerEl.textContent = '';
+      bannerEl.innerHTML = '';
       bannerEl.classList.add('hidden');
     }
   }
@@ -678,45 +678,49 @@ function renderPricingShowcase(pricingData) {
     {
       key: 'sederhana',
       name: 'Sederhana',
+      subtitle: 'Untuk persiapan personal',
       duration: '6 Bulan',
       featured: false,
       defaultBadge: '',
       features: [
         '1 Akun (Single)',
-        'Overview & Countdown',
+        'Overview & Countdown Pernikahan',
+        '2 Template Rencana (KUA Hemat & Sederhana)',
         'Rencana Anggaran (Budget)',
-        'Vendor & Kontrak',
+        'Daftar Tamu & RSVP',
         'Checklist Tugas',
-        'Export CSV',
       ],
     },
     {
       key: 'medium',
       name: 'Medium',
+      subtitle: 'Kolaborasi lengkap berdua',
       duration: '6 Bulan',
       featured: false,
       defaultBadge: '',
       features: [
-        '2 Akun (Pasangan Sync)',
-        'Semua Fitur Sederhana',
-        'Daftar Tamu & RSVP',
-        'Rundown Acara',
-        'Export CSV',
+        '2 Akun Pasangan (Sync Real-time)',
+        'Semua Fitur Sederhana & Semua Template',
+        'Vendor, Kontrak & Upload Kwitansi',
+        'Rundown Acara & Tabungan / Cicilan',
+        'Moodboard / Aset & Dark Mode',
+        'Self Check-In Tamu (QR Umum)',
       ],
     },
     {
       key: 'rich',
       name: 'Rich',
-      duration: '13 Bulan',
+      subtitle: 'Eksklusif tanpa batas',
+      duration: '12 + 1 Bulan Bonus',
       featured: true,
       defaultBadge: 'Paling Lengkap',
       features: [
-        '2 Akun (Pasangan Sync)',
+        'Masa Aktif 13 Bulan (12 + 1 Bonus)',
         'Semua Fitur Medium',
-        'Self Check-In Tamu (QR Umum)',
-        'Link QR & Undangan Personal Tamu',
-        'Google Drive Galeri & Dokumen',
-        'Export PDF Laporan Lengkap',
+        'Link QR & Undangan Personal per Tamu',
+        'Tanpa Watermark di Halaman Check-In',
+        'Custom Folder Google Drive Pribadi',
+        'Riwayat Aktivitas (Audit Log) Pasangan',
       ],
     },
   ];
@@ -726,21 +730,36 @@ function renderPricingShowcase(pricingData) {
     const normalPrice = Number(cfg.price || 0);
     const promoPrice = Number(cfg.promo_price || 0);
     const hasPromo = promoPrice > 0 && promoPrice < normalPrice;
+    const discountPct = hasPromo ? Math.round(((normalPrice - promoPrice) / normalPrice) * 100) : 0;
     const effectivePrice = hasPromo ? promoPrice : normalPrice;
-    const badgeText = (cfg.promo_label || '').trim() || t.defaultBadge;
+    const customLabel = (cfg.promo_label || '').trim();
+    const badgeText = customLabel || (hasPromo ? `Hemat ${discountPct}%` : t.defaultBadge);
 
     const priceHtml = hasPromo
-      ? `<div class="price-promo-row"><span class="price-original">${formatPriceRp(normalPrice)}</span></div><div class="price-tag">${formatPriceRp(promoPrice)} <span>/ ${t.duration}</span></div>`
-      : `<div class="price-tag">${formatPriceRp(normalPrice)} <span>/ ${t.duration}</span></div>`;
+      ? `
+        <div class="price-block">
+          <div class="price-promo-row">
+            <span class="price-original">${formatPriceRp(normalPrice)}</span>
+            <span class="price-discount-pill">-${discountPct}%</span>
+          </div>
+          <div class="price-tag">${formatPriceRp(promoPrice)} <span class="price-duration">/ ${t.duration}</span></div>
+        </div>`
+      : `
+        <div class="price-block">
+          <div class="price-tag">${formatPriceRp(normalPrice)} <span class="price-duration">/ ${t.duration}</span></div>
+        </div>`;
 
     const waMsg = encodeURIComponent(`Halo Admin Ahmad Husain, saya mau beli paket ${t.name} My Weeding Plan (${formatPriceRp(effectivePrice)}).`);
     const waUrl = `https://wa.me/6289509901360?text=${waMsg}`;
 
     return `
-      <div class="card pricing-card${t.featured ? ' featured' : ''}">
+      <div class="card pricing-card${t.featured ? ' featured' : ''}${hasPromo ? ' has-promo' : ''}">
         <div class="pricing-card-head">
-          <h4>${escapeHtml(t.name)}</h4>
-          ${badgeText ? `<span class="badge ${hasPromo ? 'badge-promo' : 'badge-ok'}">${escapeHtml(badgeText)}</span>` : ''}
+          <div>
+            <h4>${escapeHtml(t.name)}</h4>
+            <p class="pricing-sub">${escapeHtml(t.subtitle)}</p>
+          </div>
+          ${badgeText ? `<span class="badge ${hasPromo || customLabel ? 'badge-promo' : 'badge-ok'}">${escapeHtml(badgeText)}</span>` : ''}
         </div>
         ${priceHtml}
         <ul class="pricing-features">${t.features.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
