@@ -951,6 +951,8 @@ function renderUserHeader() {
 }
 
 async function loadAllData() {
+  const mc = document.querySelector('#app-view .main-content');
+  mc?.classList.add('is-loading');
   try {
     const res = await apiCall('getAll');
     if (res.plan && state.user) {
@@ -972,6 +974,8 @@ async function loadAllData() {
     renderAll();
   } catch (err) {
     showToast(err.message, true);
+  } finally {
+    mc?.classList.remove('is-loading');
   }
 }
 
@@ -2369,6 +2373,8 @@ async function loadAdminDashboard() {
     $('admin-login-box').classList.remove('hidden');
     return;
   }
+  const amc = document.querySelector('#admin-content .main-content');
+  amc?.classList.add('is-loading');
   try {
     const data = await apiCall('adminDashboard', { admin_key: adminKeySession });
     saveAdminSession(adminKeySession, false);
@@ -2383,6 +2389,8 @@ async function loadAdminDashboard() {
       $('admin-login-box').classList.remove('hidden');
     }
     showToast(err.message, true);
+  } finally {
+    amc?.classList.remove('is-loading');
   }
 }
 
