@@ -846,6 +846,7 @@ input[type="checkbox"] {
   font-family: 'Patrick Hand', 'Plus Jakarta Sans', sans-serif;
   font-size: 1rem;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .toast.error {
