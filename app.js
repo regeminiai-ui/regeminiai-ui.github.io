@@ -778,6 +778,7 @@ function renderPricingShowcase(pricingData) {
         'Rencana Anggaran (Budget)',
         'Daftar Tamu & RSVP',
         'Checklist Tugas',
+        'Backup Data JSON',
       ],
     },
     {
@@ -794,7 +795,7 @@ function renderPricingShowcase(pricingData) {
         'Rundown Acara & Tabungan / Cicilan',
         'Moodboard / Aset & Dark Mode',
         'Self Check-In Tamu (QR Umum)',
-        'Backup Laporan PDF',
+        'Backup Data JSON & Laporan PDF',
       ],
     },
     {
@@ -807,7 +808,7 @@ function renderPricingShowcase(pricingData) {
         'Masa Aktif 13 Bulan (12 + 1 Bonus)',
         'Semua Fitur Medium',
         'Tema Eksklusif Neumorphism (Light & Dark)',
-        'Backup Laporan Excel & PDF',
+        'Backup Data JSON, Excel & PDF',
         'Link QR & Undangan Personal per Tamu',
         'Tanpa Watermark di Halaman Check-In',
         'Custom Folder Google Drive Pribadi',
