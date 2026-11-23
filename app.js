@@ -2268,7 +2268,45 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+const ADMIN_SESSION_STORAGE = 'nikahplan_admin_session';
+const ADMIN_SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 jam
 let adminKeySession = '';
+
+function getValidAdminSession() {
+  try {
+    const raw = localStorage.getItem(ADMIN_SESSION_STORAGE);
+    if (!raw) return '';
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.key || Date.now() > Number(parsed.expiresAt || 0)) {
+      localStorage.removeItem(ADMIN_SESSION_STORAGE);
+      return '';
+    }
+    return String(parsed.key);
+  } catch (e) {
+    localStorage.removeItem(ADMIN_SESSION_STORAGE);
+    return '';
+  }
+}
+
+function saveAdminSession(key, resetExpiry = false) {
+  if (!key) return;
+  let expiresAt = Date.now() + ADMIN_SESSION_TTL_MS;
+  if (!resetExpiry) {
+    try {
+      const raw = localStorage.getItem(ADMIN_SESSION_STORAGE);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed && parsed.expiresAt && Date.now() < Number(parsed.expiresAt)) {
+        expiresAt = Number(parsed.expiresAt);
+      }
+    } catch (e) {}
+  }
+  localStorage.setItem(ADMIN_SESSION_STORAGE, JSON.stringify({ key, expiresAt }));
+}
+
+function clearAdminSession() {
+  adminKeySession = '';
+  localStorage.removeItem(ADMIN_SESSION_STORAGE);
+}
 
 function openAdminView() {
   $('auth-view').classList.add('hidden');
@@ -2276,10 +2314,18 @@ function openAdminView() {
   $('checkin-view').classList.add('hidden');
   $('guest-scanner-view').classList.add('hidden');
   $('admin-view').classList.remove('hidden');
+
+  const savedKey = getValidAdminSession();
+  if (savedKey) {
+    adminKeySession = savedKey;
+    $('admin-login-box').classList.add('hidden');
+    $('admin-content').classList.remove('hidden');
+    loadAdminDashboard();
+  }
 }
 
 function exitAdminView() {
-  adminKeySession = '';
+  clearAdminSession();
   $('admin-view').classList.add('hidden');
   $('admin-content').classList.add('hidden');
   $('admin-login-box').classList.remove('hidden');
@@ -2287,12 +2333,25 @@ function exitAdminView() {
 }
 
 async function loadAdminDashboard() {
+  if (!adminKeySession) {
+    clearAdminSession();
+    $('admin-content').classList.add('hidden');
+    $('admin-login-box').classList.remove('hidden');
+    return;
+  }
   try {
     const data = await apiCall('adminDashboard', { admin_key: adminKeySession });
+    saveAdminSession(adminKeySession, false);
     $('admin-login-box').classList.add('hidden');
     $('admin-content').classList.remove('hidden');
     renderAdminTables(data);
   } catch (err) {
+    const isAuthErr = /admin key/i.test(err.message || '');
+    if (isAuthErr || $('admin-content').classList.contains('hidden')) {
+      clearAdminSession();
+      $('admin-content').classList.add('hidden');
+      $('admin-login-box').classList.remove('hidden');
+    }
     showToast(err.message, true);
   }
 }
@@ -2595,6 +2654,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         await apiCall('adminUpdateKey', { admin_key: adminKeySession, new_key: newKey });
         adminKeySession = newKey;
+        saveAdminSession(newKey, false);
         $('adm-new-key').value = '';
         showToast('Admin Key berhasil diperbarui!');
       } catch (err) {
