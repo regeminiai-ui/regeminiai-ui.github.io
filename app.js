@@ -266,6 +266,7 @@ function demoApiCall(action, payload) {
     currentUser.name = payload.name;
     currentUser.partner_name = payload.partner_name;
     currentUser.partner_email = (payload.partner_email || '').trim().toLowerCase();
+    currentUser.drive_folder_id = (payload.drive_folder_id || '').trim();
     currentUser.wedding_date = payload.wedding_date || '';
     saveDemoDb(db);
     const { password, ...safeUser } = currentUser;
@@ -445,6 +446,7 @@ function renderUserHeader() {
   $('set-name').value = u.name || '';
   $('set-partner').value = u.partner_name || '';
   $('set-partner-email').value = u.partner_email || '';
+  $('set-drive-folder').value = u.drive_folder_id || '';
   $('set-date').value = dateStr;
   $('set-api-url').value = state.apiUrl || '';
 
@@ -1417,6 +1419,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: $('set-name').value,
             partner_name: $('set-partner').value,
             partner_email: $('set-partner-email').value,
+            drive_folder_id: $('set-drive-folder').value,
             wedding_date: $('set-date').value,
           });
           saveSession(state.token, res.user);

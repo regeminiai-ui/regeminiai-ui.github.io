@@ -6,7 +6,7 @@
  */
 
 const SCHEMAS = {
-  users: ['id', 'email', 'name', 'partner_name', 'wedding_date', 'password_hash', 'salt', 'created_at', 'partner_email'],
+  users: ['id', 'email', 'name', 'partner_name', 'wedding_date', 'password_hash', 'salt', 'created_at', 'partner_email', 'drive_folder_id'],
   budgets: ['id', 'user_id', 'category', 'item', 'estimated', 'actual', 'paid', 'status', 'notes', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   guests: ['id', 'user_id', 'name', 'side', 'group', 'pax', 'rsvp', 'phone', 'notes', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   vendors: ['id', 'user_id', 'category', 'name', 'pic', 'phone', 'price', 'dp_paid', 'status', 'notes', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'created_at', 'created_by', 'updated_at', 'updated_by'],
@@ -235,12 +235,20 @@ function handleLogin_(payload) {
       id: user.id,
       email: user.email,
       partner_email: user.partner_email || '',
+      drive_folder_id: user.drive_folder_id || '',
       actor_email: email,
       name: user.name,
       partner_name: user.partner_name,
       wedding_date: user.wedding_date,
     },
   };
+}
+
+function extractDriveFolderId_(input) {
+  const s = String(input || '').trim();
+  if (!s) return '';
+  const m = s.match(/folders\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : s;
 }
 
 function handleUpdateProfile_(userId, payload) {
@@ -265,6 +273,7 @@ function handleUpdateProfile_(userId, payload) {
     user.partner_name = String(payload.partner_name || '').trim();
     user.wedding_date = String(payload.wedding_date || '');
     user.partner_email = partnerEmail;
+    user.drive_folder_id = extractDriveFolderId_(payload.drive_folder_id);
 
     const rowValues = headers.map((h) => user[h] ?? '');
     sheet.getRange(user._rowIndex, 1, 1, headers.length).setValues([rowValues]);
@@ -274,6 +283,7 @@ function handleUpdateProfile_(userId, payload) {
         id: user.id,
         email: user.email,
         partner_email: user.partner_email,
+        drive_folder_id: user.drive_folder_id,
         name: user.name,
         partner_name: user.partner_name,
         wedding_date: user.wedding_date,
@@ -398,15 +408,23 @@ function handleUploadReceipt_(auth, payload) {
   const filename = String(payload.filename || ('kwitansi_' + Date.now() + '.jpg'));
   if (!base64) throw new Error('File bukti tidak boleh kosong.');
 
-  const rootName = 'My Weeding Plan - Bukti Kwitansi';
-  const rootFolders = DriveApp.getFoldersByName(rootName);
-  const rootFolder = rootFolders.hasNext() ? rootFolders.next() : DriveApp.createFolder(rootName);
+  const users = readRows_('users');
+  const user = users.find((u) => u.id === userId);
+  const customFolderId = extractDriveFolderId_(user && user.drive_folder_id);
 
-  const userFolders = rootFolder.getFoldersByName(userId);
-  const userFolder = userFolders.hasNext() ? userFolders.next() : rootFolder.createFolder(userId);
+  let targetFolder;
+  if (customFolderId) {
+    targetFolder = DriveApp.getFolderById(customFolderId);
+  } else {
+    const rootName = 'My Weeding Plan - Bukti Kwitansi';
+    const rootFolders = DriveApp.getFoldersByName(rootName);
+    const rootFolder = rootFolders.hasNext() ? rootFolders.next() : DriveApp.createFolder(rootName);
+    const userFolders = rootFolder.getFoldersByName(userId);
+    targetFolder = userFolders.hasNext() ? userFolders.next() : rootFolder.createFolder(userId);
+  }
 
   const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, filename);
-  const file = userFolder.createFile(blob);
+  const file = targetFolder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Access.VIEW);
 
   const now = new Date().toISOString();
