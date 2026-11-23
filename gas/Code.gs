@@ -12,10 +12,11 @@ const SCHEMAS = {
   vendors: ['id', 'user_id', 'category', 'name', 'pic', 'phone', 'price', 'dp_paid', 'status', 'notes', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'installments_json', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   checklists: ['id', 'user_id', 'phase', 'task', 'pic', 'due_date', 'done', 'receipt_url', 'receipt_uploaded_at', 'receipt_uploaded_by', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   rundowns: ['id', 'user_id', 'event_name', 'start_time', 'end_time', 'activity', 'pic', 'location', 'notes', 'created_at', 'created_by', 'updated_at', 'updated_by'],
+  assets: ['id', 'user_id', 'module', 'item_label', 'file_name', 'drive_url', 'description', 'uploaded_by', 'uploaded_at', 'created_at', 'created_by', 'updated_at', 'updated_by'],
   activity_logs: ['id', 'user_id', 'action', 'module', 'item_label', 'actor_email', 'created_at'],
 };
 
-const DATA_MODULES = ['budgets', 'guests', 'vendors', 'checklists', 'rundowns'];
+const DATA_MODULES = ['budgets', 'guests', 'vendors', 'checklists', 'rundowns', 'assets'];
 
 function doGet() {
   return jsonResponse({ ok: true, service: 'NikahPlan API', status: 'running' });
@@ -449,12 +450,39 @@ function handleUploadReceipt_(auth, payload) {
   }
 
   const now = new Date().toISOString();
-  logActivity_(userId, 'UPLOAD_RECEIPT', payload.module || 'budgets', filename, actor, now);
+  const fileUrl = file.getUrl();
+  const modName = String(payload.module || 'assets');
+  const itemLabel = String(payload.item_label || filename);
+  const desc = String(payload.description || '');
+
+  const assetObj = {
+    id: 'ass_' + Utilities.getUuid().slice(0, 8),
+    user_id: userId,
+    module: modName,
+    item_label: itemLabel,
+    file_name: filename,
+    drive_url: fileUrl,
+    description: desc,
+    uploaded_by: actor,
+    uploaded_at: now,
+    created_at: now,
+    created_by: actor,
+    updated_at: now,
+    updated_by: actor,
+  };
+  const assetSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('assets');
+  if (assetSheet) {
+    const assetHeaders = assetSheet.getRange(1, 1, 1, assetSheet.getLastColumn()).getValues()[0];
+    assetSheet.appendRow(assetHeaders.map((h) => assetObj[h] ?? ''));
+  }
+
+  logActivity_(userId, 'UPLOAD_RECEIPT', modName, filename, actor, now);
 
   return {
-    url: file.getUrl(),
+    url: fileUrl,
     uploaded_at: now,
     uploaded_by: actor,
+    asset: assetObj,
   };
 }
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
-  <link rel="stylesheet" href="styles.css?v=20" />
+  <link rel="stylesheet" href="styles.css?v=21" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -170,6 +170,10 @@
         <button type="button" class="nav-item" data-tab="rundowns">
           <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
           <span>Rundown</span>
+        </button>
+        <button type="button" class="nav-item" data-tab="assets">
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="9.5" cy="12.5" r="1.5"/><path d="M21 16l-4.5-4.5L11 17"/></svg>
+          <span>Asset</span>
         </button>
         <button type="button" class="nav-item" data-tab="settings">
           <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
@@ -446,6 +450,38 @@
         </div>
       </section>
 
+      <!-- ASSETS -->
+      <section id="tab-assets" class="tab-panel hidden">
+        <div class="panel-toolbar">
+          <div class="filters">
+            <input id="filter-asset-search" type="search" placeholder="Cari file atau keterangan..." />
+            <select id="filter-asset-module">
+              <option value="">Semua Sumber</option>
+              <option value="budgets">Anggaran</option>
+              <option value="vendors">Vendor</option>
+              <option value="checklists">Checklist</option>
+              <option value="assets">Upload Langsung</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" data-add="assets">+ Upload Asset</button>
+        </div>
+        <div class="table-wrap card">
+          <table>
+            <thead>
+              <tr>
+                <th>File Google Drive</th>
+                <th>Keterangan</th>
+                <th>Sumber</th>
+                <th>User</th>
+                <th>Tanggal</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-assets"></tbody>
+          </table>
+        </div>
+      </section>
+
       <!-- SETTINGS -->
       <section id="tab-settings" class="tab-panel hidden">
         <div class="grid-2">
@@ -531,6 +567,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20"></script>
+  <script src="app.js?v=21"></script>
 </body>
 </html>

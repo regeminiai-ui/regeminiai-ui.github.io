@@ -24,6 +24,7 @@ const state = {
     vendors: [],
     checklists: [],
     rundowns: [],
+    assets: [],
     activity_logs: [],
   },
   modalContext: null,
@@ -91,6 +92,14 @@ const MODULE_SCHEMAS = {
       { key: 'pic', label: 'PIC / Koordinator', type: 'text' },
       { key: 'location', label: 'Lokasi', type: 'text' },
       { key: 'notes', label: 'Catatan', type: 'text' },
+    ],
+  },
+  assets: {
+    title: 'Asset & File',
+    fields: [
+      { key: 'item_label', label: 'Judul / Nama File', type: 'text', required: true },
+      { key: 'description', label: 'Keterangan (Tentang Apa)', type: 'text', required: true },
+      { key: 'drive_url', label: 'File Foto / PDF (Google Drive)', type: 'receipt' },
     ],
   },
 };
@@ -281,17 +290,38 @@ function demoApiCall(action, payload) {
       vendors: db.vendors.filter((r) => r.user_id === userId),
       checklists: db.checklists.filter((r) => r.user_id === userId),
       rundowns: db.rundowns.filter((r) => r.user_id === userId),
+      assets: (db.assets || []).filter((r) => r.user_id === userId),
       activity_logs: (db.activity_logs || []).filter((r) => r.user_id === userId).slice(-30).reverse(),
     };
   }
 
   if (action === 'uploadReceipt') {
     const now = new Date().toISOString();
-    const actor = currentUser.email;
+    const actor = state.user?.actor_email || currentUser.email;
+    const url = '#demo-receipt-' + encodeURIComponent(payload.filename || 'kwitansi.jpg');
+    const asset = {
+      id: uid(),
+      user_id: userId,
+      module: payload.module || 'assets',
+      item_label: payload.item_label || payload.filename,
+      file_name: payload.filename,
+      drive_url: url,
+      description: payload.description || '',
+      uploaded_by: actor,
+      uploaded_at: now,
+      created_at: now,
+      created_by: actor,
+      updated_at: now,
+      updated_by: actor,
+    };
+    db.assets = db.assets || [];
+    db.assets.push(asset);
+    saveDemoDb(db);
     return {
-      url: '#demo-receipt-' + encodeURIComponent(payload.filename || 'kwitansi.jpg'),
+      url,
       uploaded_at: now,
       uploaded_by: actor,
+      asset,
     };
   }
 
@@ -346,8 +376,8 @@ function demoApiCall(action, payload) {
   }
 
   if (action === 'resetUserData') {
-    ['budgets', 'guests', 'vendors', 'checklists', 'rundowns'].forEach((m) => {
-      db[m] = db[m].filter((r) => r.user_id !== userId);
+    ['budgets', 'guests', 'vendors', 'checklists', 'rundowns', 'assets'].forEach((m) => {
+      db[m] = (db[m] || []).filter((r) => r.user_id !== userId);
     });
     saveDemoDb(db);
     return { deleted: true };
@@ -475,6 +505,7 @@ async function loadAllData() {
       vendors: res.vendors || [],
       checklists: res.checklists || [],
       rundowns: res.rundowns || [],
+      assets: res.assets || [],
       activity_logs: res.activity_logs || [],
     };
     renderAll();
@@ -575,6 +606,7 @@ function renderAll() {
   renderVendors();
   renderChecklists();
   renderRundowns();
+  renderAssets();
 }
 
 const WEDDING_PLANS = [
@@ -1070,6 +1102,39 @@ function renderRundowns() {
     : '<tr class="empty-row"><td colspan="9" class="muted">Belum ada jadwal rundown.</td></tr>';
 }
 
+function renderAssets() {
+  const el = $('tbody-assets');
+  if (!el) return;
+  const q = ($('filter-asset-search')?.value || '').toLowerCase();
+  const modFilter = $('filter-asset-module')?.value || '';
+  const modLabels = {
+    budgets: 'Anggaran',
+    vendors: 'Vendor',
+    checklists: 'Checklist',
+    assets: 'Upload Langsung',
+  };
+  const rows = (state.data.assets || []).filter((a) => {
+    const text = `${a.item_label || ''} ${a.file_name || ''} ${a.description || ''}`.toLowerCase();
+    return (!q || text.includes(q)) && (!modFilter || a.module === modFilter);
+  });
+  el.innerHTML = rows.length
+    ? rows.map((a) => `
+      <tr>
+        <td data-label="File Drive">
+          <div>
+            <strong>${escapeHtml(a.item_label || a.file_name || 'File')}</strong>
+            ${a.file_name ? `<div class="muted">${escapeHtml(a.file_name)}</div>` : ''}
+            ${a.drive_url ? `<div><a class="receipt-link" href="${escapeHtml(a.drive_url)}" target="_blank" rel="noopener">Buka di Google Drive</a></div>` : ''}
+          </div>
+        </td>
+        <td data-label="Keterangan">${escapeHtml(a.description || '-')}</td>
+        <td data-label="Sumber"><span class="badge badge-neutral">${escapeHtml(modLabels[a.module] || a.module || 'Umum')}</span></td>
+        ${auditCellsHtml(a)}
+        <td data-label="Aksi" class="td-actions">${actionButtons('assets', a.id)}</td>
+      </tr>`).join('')
+    : '<tr class="empty-row"><td colspan="6" class="muted">Belum ada file asset terupload.</td></tr>';
+}
+
 // --- CRUD Modal & Actions ---
 function openModal(module, existingItem = null) {
   const schema = MODULE_SCHEMAS[module];
@@ -1313,6 +1378,7 @@ function switchTab(tab) {
     vendors: 'Manajemen Vendor',
     checklists: 'Checklist Persiapan',
     rundowns: 'Rundown Acara',
+    assets: 'Asset & File Upload',
     settings: 'Pengaturan',
   };
   $('page-title').textContent = titles[tab] || 'My Weeding Plan';
@@ -1395,6 +1461,7 @@ document.addEventListener('DOMContentLoaded', () => {
   ['filter-vendor-search', 'filter-vendor-status'].forEach((id) => $(id).addEventListener('input', renderVendors));
   $('filter-checklist-phase').addEventListener('change', renderChecklists);
   $('filter-rundown-event').addEventListener('change', renderRundowns);
+  ['filter-asset-search', 'filter-asset-module'].forEach((id) => $(id).addEventListener('input', renderAssets));
 
   // Modal handlers
   $('modal-close').addEventListener('click', closeModal);
@@ -1445,10 +1512,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const up = await apiCall('uploadReceipt', {
               module: ctx.module,
+              item_label: existing.item || existing.name || file.name,
+              description: `${ctx.module === 'budgets' ? 'Anggaran' : 'Vendor'}: ${existing.item || existing.name} — Cicilan ${formatRp(amount)}${formData.get('note') ? ' (' + formData.get('note') + ')' : ''}`,
               filename: file.name,
               mimeType: file.type || 'image/jpeg',
               base64,
             });
+            if (up.asset) state.data.assets.push(up.asset);
             receiptUrl = up.url;
             uploadedAt = up.uploaded_at;
             uploadedBy = up.uploaded_by;
@@ -1526,16 +1596,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 reader.onerror = () => reject(new Error('Gagal membaca file.'));
                 reader.readAsDataURL(file);
               });
+              const itemLabel = item.item_label || item.item || item.name || item.task || file.name;
+              const desc = item.description || item.notes || `${ctx.module}: ${itemLabel}`;
               const up = await apiCall('uploadReceipt', {
                 module: ctx.module,
+                item_label: itemLabel,
+                description: desc,
                 filename: file.name,
                 mimeType: file.type || 'image/jpeg',
                 base64,
               });
-              item.receipt_url = up.url;
-              item.receipt_uploaded_at = up.uploaded_at;
-              item.receipt_uploaded_by = up.uploaded_by;
+              if (up.asset) state.data.assets.push(up.asset);
+              if (ctx.module === 'assets') {
+                item.drive_url = up.url;
+                item.file_name = file.name;
+                item.uploaded_at = up.uploaded_at;
+                item.uploaded_by = up.uploaded_by;
+                if (!ctx.id && up.asset) {
+                  pushLocalLog('UPLOAD_RECEIPT', 'assets', file.name);
+                  renderAll();
+                  closeModal();
+                  showToast('Asset berhasil diupload ke Google Drive.');
+                  return;
+                }
+              } else {
+                item.receipt_url = up.url;
+                item.receipt_uploaded_at = up.uploaded_at;
+                item.receipt_uploaded_by = up.uploaded_by;
+              }
               pushLocalLog('UPLOAD_RECEIPT', ctx.module, file.name);
+            } else if (ctx.module === 'assets' && !ctx.id) {
+              throw new Error('Pilih file foto atau PDF terlebih dahulu.');
             }
 
             const res = await apiCall('upsertItem', { module: ctx.module, item });
@@ -1603,7 +1694,7 @@ document.addEventListener('DOMContentLoaded', () => {
               throw err;
             }
           }
-          state.data = { budgets: [], guests: [], vendors: [], checklists: [], rundowns: [] };
+          state.data = { budgets: [], guests: [], vendors: [], checklists: [], rundowns: [], assets: [] };
           renderAll();
           showToast('Semua data akun Anda berhasil direset.');
         } catch (err) {
