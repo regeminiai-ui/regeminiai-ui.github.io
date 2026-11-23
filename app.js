@@ -2377,30 +2377,78 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-admin-style-toggle')?.addEventListener('click', toggleUiStyle);
 
   if (!DEFAULT_API_URL) {
-    document.body.innerHTML = `
-      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
-        <div class="card" style="max-width:420px;width:100%;text-align:center;">
-          <h2 style="margin-bottom:8px;">Akses Terenkripsi</h2>
-          <p class="muted" style="margin-bottom:16px;">Project ini dilindungi. Masukkan Owner Key untuk membuka enkripsi di perangkat/domain ini.</p>
-          <form id="owner-unlock-form" class="form-stack">
-            <div class="field">
-              <label for="owner-key-input">Owner Key</label>
-              <input id="owner-key-input" type="password" placeholder="MWP-VAULT-..." required />
-            </div>
-            <button type="submit" class="btn btn-primary btn-full">Buka Enkripsi</button>
-          </form>
-        </div>
-      </div>`;
-    document.getElementById('owner-unlock-form')?.addEventListener('submit', (ev) => {
-      ev.preventDefault();
-      const k = (document.getElementById('owner-key-input')?.value || '').trim();
-      if (sha256HexSync(k) !== OWNER_KEY_HASH) {
-        alert('Owner Key salah!');
+    const OWNER_FAIL_KEY = 'nikahplan_ok_fail';
+    const OWNER_LOCK_KEY = 'nikahplan_ok_lock_until';
+    const MAX_ATTEMPTS = 3;
+    const LOCK_DURATION_MS = 15 * 60 * 1000;
+
+    const renderOwnerLock = () => {
+      const lockUntil = Number(localStorage.getItem(OWNER_LOCK_KEY) || 0);
+      const isLocked = Date.now() < lockUntil;
+      const fails = Number(localStorage.getItem(OWNER_FAIL_KEY) || 0);
+      document.body.innerHTML = `
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+          <div class="card" style="max-width:420px;width:100%;text-align:center;">
+            <h2 style="margin-bottom:8px;">${isLocked ? 'Akses Diblokir' : 'Akses Terenkripsi'}</h2>
+            <p id="owner-lock-msg" class="muted" style="margin-bottom:16px;">${
+              isLocked
+                ? 'Terlalu banyak percobaan salah (3x). State browser dibersihkan.'
+                : `Project ini dilindungi. Masukkan Owner Key untuk membuka enkripsi.${fails > 0 ? ` (Sisa percobaan: ${MAX_ATTEMPTS - fails}x)` : ''}`
+            }</p>
+            <form id="owner-unlock-form" class="form-stack">
+              <div class="field">
+                <label for="owner-key-input">Owner Key</label>
+                <input id="owner-key-input" type="password" placeholder="MWP-VAULT-..." ${isLocked ? 'disabled' : 'required'} />
+              </div>
+              <button type="submit" class="btn btn-primary btn-full" ${isLocked ? 'disabled' : ''}>${isLocked ? 'Terkunci' : 'Buka Enkripsi'}</button>
+            </form>
+          </div>
+        </div>`;
+
+      if (isLocked) {
+        const msgEl = document.getElementById('owner-lock-msg');
+        const tick = () => {
+          const left = Math.max(0, lockUntil - Date.now());
+          if (left <= 0) {
+            localStorage.removeItem(OWNER_LOCK_KEY);
+            localStorage.removeItem(OWNER_FAIL_KEY);
+            renderOwnerLock();
+            return;
+          }
+          const m = Math.floor(left / 60000);
+          const s = Math.floor((left % 60000) / 1000);
+          if (msgEl) msgEl.textContent = `Akses diblokir sementara (3x salah). Coba lagi dalam ${m}m ${String(s).padStart(2, '0')}d.`;
+          setTimeout(tick, 1000);
+        };
+        tick();
         return;
       }
-      localStorage.setItem(OWNER_KEY_STORAGE, k);
-      window.location.reload();
-    });
+
+      document.getElementById('owner-unlock-form')?.addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        const k = (document.getElementById('owner-key-input')?.value || '').trim();
+        if (sha256HexSync(k) !== OWNER_KEY_HASH) {
+          const nextFails = Number(localStorage.getItem(OWNER_FAIL_KEY) || 0) + 1;
+          if (nextFails >= MAX_ATTEMPTS) {
+            localStorage.clear();
+            sessionStorage.clear();
+            localStorage.setItem(OWNER_LOCK_KEY, String(Date.now() + LOCK_DURATION_MS));
+            renderOwnerLock();
+            return;
+          }
+          localStorage.setItem(OWNER_FAIL_KEY, String(nextFails));
+          alert(`Owner Key salah! Sisa percobaan: ${MAX_ATTEMPTS - nextFails}x.`);
+          renderOwnerLock();
+          return;
+        }
+        localStorage.removeItem(OWNER_FAIL_KEY);
+        localStorage.removeItem(OWNER_LOCK_KEY);
+        localStorage.setItem(OWNER_KEY_STORAGE, k);
+        window.location.reload();
+      });
+    };
+
+    renderOwnerLock();
     return;
   }
 

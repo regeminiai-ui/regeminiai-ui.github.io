@@ -6,6 +6,25 @@ import crypto from 'node:crypto';
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const PLAIN_PATH = path.join(ROOT, 'gas', 'Code.gs');
 const ENC_PATH = path.join(ROOT, 'gas', 'Code.gs.enc');
+const STATE_PATH = path.join(ROOT, '.vault-state.json');
+const MAX_ATTEMPTS = 3;
+const LOCK_MS = 15 * 60 * 1000;
+
+function readState() {
+  try {
+    return JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
+  } catch {
+    return { fails: 0, lockUntil: 0 };
+  }
+}
+
+function writeState(st) {
+  fs.writeFileSync(STATE_PATH, JSON.stringify(st), 'utf8');
+}
+
+function clearState() {
+  if (fs.existsSync(STATE_PATH)) fs.unlinkSync(STATE_PATH);
+}
 
 function deriveKey(passphrase, salt) {
   return crypto.scryptSync(passphrase, salt, 32);
@@ -40,17 +59,36 @@ function decryptFile(passphrase) {
     console.error('File terenkripsi tidak ditemukan:', ENC_PATH);
     process.exit(1);
   }
-  const payload = JSON.parse(fs.readFileSync(ENC_PATH, 'utf8'));
-  const salt = Buffer.from(payload.salt, 'base64');
-  const iv = Buffer.from(payload.iv, 'base64');
-  const tag = Buffer.from(payload.tag, 'base64');
-  const data = Buffer.from(payload.data, 'base64');
-  const key = deriveKey(passphrase, salt);
-  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-  decipher.setAuthTag(tag);
-  const plain = Buffer.concat([decipher.update(data), decipher.final()]);
-  fs.writeFileSync(PLAIN_PATH, plain);
-  console.log('Berhasil didekripsi ->', PLAIN_PATH);
+  const st = readState();
+  if (st.lockUntil && Date.now() < st.lockUntil) {
+    const secs = Math.ceil((st.lockUntil - Date.now()) / 1000);
+    console.error(`Akses diblokir sementara (3x salah). Coba lagi dalam ${secs} detik.`);
+    process.exit(1);
+  }
+  try {
+    const payload = JSON.parse(fs.readFileSync(ENC_PATH, 'utf8'));
+    const salt = Buffer.from(payload.salt, 'base64');
+    const iv = Buffer.from(payload.iv, 'base64');
+    const tag = Buffer.from(payload.tag, 'base64');
+    const data = Buffer.from(payload.data, 'base64');
+    const key = deriveKey(passphrase, salt);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    const plain = Buffer.concat([decipher.update(data), decipher.final()]);
+    fs.writeFileSync(PLAIN_PATH, plain);
+    clearState();
+    console.log('Berhasil didekripsi ->', PLAIN_PATH);
+  } catch {
+    const nextFails = (st.fails || 0) + 1;
+    if (nextFails >= MAX_ATTEMPTS) {
+      writeState({ fails: 0, lockUntil: Date.now() + LOCK_MS });
+      console.error('Owner Key salah 3x! Vault dikunci selama 15 menit.');
+    } else {
+      writeState({ fails: nextFails, lockUntil: 0 });
+      console.error(`Owner Key salah! Sisa percobaan: ${MAX_ATTEMPTS - nextFails}x.`);
+    }
+    process.exit(1);
+  }
 }
 
 const [, , cmd, key] = process.argv;
