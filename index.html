@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NikahPlan — Perencana Pernikahan</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- Toast notification -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- AUTH VIEW -->
+  <section id="auth-view" class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="brand-mark">NP</span>
+        <h1>NikahPlan</h1>
+        <p>Rencana pernikahan terstruktur, tersimpan aman di Google Sheets.</p>
+      </div>
+
+      <div id="mode-banner" class="mode-banner hidden"></div>
+
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab active" data-auth-tab="login">Masuk</button>
+        <button type="button" class="auth-tab" data-auth-tab="register">Daftar Akun</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="auth-form">
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" required placeholder="nama@email.com" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" required placeholder="Minimal 6 karakter" autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Masuk</button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" class="auth-form hidden">
+        <div class="field">
+          <label for="reg-name">Nama Anda</label>
+          <input id="reg-name" type="text" required placeholder="Contoh: Raka" />
+        </div>
+        <div class="field">
+          <label for="reg-partner">Nama Pasangan</label>
+          <input id="reg-partner" type="text" required placeholder="Contoh: Nadia" />
+        </div>
+        <div class="field">
+          <label for="reg-date">Tanggal Rencana Pernikahan</label>
+          <input id="reg-date" type="date" />
+        </div>
+        <div class="field">
+          <label for="reg-email">Email</label>
+          <input id="reg-email" type="email" required placeholder="nama@email.com" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="reg-password">Password</label>
+          <input id="reg-password" type="password" minlength="6" required placeholder="Minimal 6 karakter" autocomplete="new-password" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Buat Akun</button>
+      </form>
+
+      <div class="auth-footer">
+        <button type="button" id="btn-open-api-config" class="link-btn">Konfigurasi URL Google Apps Script</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN APP VIEW -->
+  <div id="app-view" class="app-layout hidden">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="brand-mark">NP</span>
+        <div>
+          <div class="brand-title">NikahPlan</div>
+          <div id="sidebar-couple" class="brand-sub">-</div>
+        </div>
+      </div>
+
+      <nav class="nav-list" aria-label="Menu Utama">
+        <button type="button" class="nav-item active" data-tab="dashboard">Ringkasan</button>
+        <button type="button" class="nav-item" data-tab="budgets">Anggaran</button>
+        <button type="button" class="nav-item" data-tab="guests">Daftar Tamu</button>
+        <button type="button" class="nav-item" data-tab="vendors">Vendor</button>
+        <button type="button" class="nav-item" data-tab="checklists">Checklist</button>
+        <button type="button" class="nav-item" data-tab="rundowns">Rundown</button>
+        <button type="button" class="nav-item" data-tab="settings">Pengaturan</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div id="connection-badge" class="badge badge-neutral">Mode Demo</div>
+        <button type="button" id="btn-logout" class="btn btn-ghost btn-full">Keluar</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <h2 id="page-title">Ringkasan</h2>
+          <p id="wedding-countdown" class="muted">Atur tanggal pernikahan di Pengaturan</p>
+        </div>
+        <div class="topbar-actions">
+          <button type="button" id="btn-refresh" class="btn btn-outline">Sinkronkan</button>
+        </div>
+      </header>
+
+      <!-- DASHBOARD -->
+      <section id="tab-dashboard" class="tab-panel">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">Total Estimasi Anggaran</span>
+            <strong id="stat-budget-est" class="stat-value">Rp 0</strong>
+            <span id="stat-budget-paid" class="stat-sub">Terbayar: Rp 0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Tamu Undangan</span>
+            <strong id="stat-guests-total" class="stat-value">0 Orang</strong>
+            <span id="stat-guests-rsvp" class="stat-sub">Hadir: 0 orang</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Vendor Terdaftar</span>
+            <strong id="stat-vendors-total" class="stat-value">0 Vendor</strong>
+            <span id="stat-vendors-deal" class="stat-sub">Deal/Lunas: 0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Progres Checklist</span>
+            <strong id="stat-checklist-pct" class="stat-value">0%</strong>
+            <span id="stat-checklist-count" class="stat-sub">0 / 0 selesai</span>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h3>Checklist Prioritas</h3>
+              <button type="button" class="link-btn" data-jump="checklists">Lihat semua</button>
+            </div>
+            <ul id="dash-checklist" class="mini-list"></ul>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3>Rundown Terdekat</h3>
+              <button type="button" class="link-btn" data-jump="rundowns">Lihat semua</button>
+            </div>
+            <ul id="dash-rundown" class="mini-list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- BUDGETS -->
+      <section id="tab-budgets" class="tab-panel hidden">
+        <div class="panel-toolbar">
+          <div class="filters">
+            <input id="filter-budget-search" type="search" placeholder="Cari pos anggaran..." />
+            <select id="filter-budget-status">
+              <option value="">Semua Status</option>
+              <option value="Belum Bayar">Belum Bayar</option>
+              <option value="DP">DP</option>
+              <option value="Lunas">Lunas</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" data-add="budgets">+ Tambah Anggaran</button>
+        </div>
+        <div class="table-wrap card">
+          <table>
+            <thead>
+              <tr>
+                <th>Kategori</th>
+                <th>Item</th>
+                <th>Estimasi</th>
+                <th>Aktual</th>
+                <th>Sudah Dibayar</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-budgets"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- GUESTS -->
+      <section id="tab-guests" class="tab-panel hidden">
+        <div class="panel-toolbar">
+          <div class="filters">
+            <input id="filter-guest-search" type="search" placeholder="Cari nama tamu..." />
+            <select id="filter-guest-rsvp">
+              <option value="">Semua RSVP</option>
+              <option value="Belum">Belum Konfirmasi</option>
+              <option value="Hadir">Hadir</option>
+              <option value="Tidak Hadir">Tidak Hadir</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" data-add="guests">+ Tambah Tamu</button>
+        </div>
+        <div class="table-wrap card">
+          <table>
+            <thead>
+              <tr>
+                <th>Nama Tamu</th>
+                <th>Pihak</th>
+                <th>Grup</th>
+                <th>Jumlah (Pax)</th>
+                <th>RSVP</th>
+                <th>No. HP</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-guests"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VENDORS -->
+      <section id="tab-vendors" class="tab-panel hidden">
+        <div class="panel-toolbar">
+          <div class="filters">
+            <input id="filter-vendor-search" type="search" placeholder="Cari vendor..." />
+            <select id="filter-vendor-status">
+              <option value="">Semua Status</option>
+              <option value="Survey">Survey</option>
+              <option value="Deal">Deal</option>
+              <option value="Lunas">Lunas</option>
+              <option value="Batal">Batal</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" data-add="vendors">+ Tambah Vendor</button>
+        </div>
+        <div class="table-wrap card">
+          <table>
+            <thead>
+              <tr>
+                <th>Kategori</th>
+                <th>Nama Vendor</th>
+                <th>PIC</th>
+                <th>Kontak</th>
+                <th>Harga Paket</th>
+                <th>DP Terbayar</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-vendors"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- CHECKLISTS -->
+      <section id="tab-checklists" class="tab-panel hidden">
+        <div class="panel-toolbar">
+          <div class="filters">
+            <select id="filter-checklist-phase">
+              <option value="">Semua Tahap</option>
+              <option value="H-6 Bulan">H-6 Bulan</option>
+              <option value="H-3 Bulan">H-3 Bulan</option>
+              <option value="H-1 Bulan">H-1 Bulan</option>
+              <option value="H-1 Minggu">H-1 Minggu</option>
+              <option value="Hari-H">Hari-H</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" data-add="checklists">+ Tambah Tugas</button>
+        </div>
+        <div class="table-wrap card">
+          <table>
+            <thead>
+              <tr>
+                <th>Selesai</th>
+                <th>Tahap</th>
+                <th>Tugas</th>
+                <th>PIC</th>
+                <th>Target Tanggal</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-checklists"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- RUNDOWNS -->
+      <section id="tab-rundowns" class="tab-panel hidden">
+        <div class="panel-toolbar">
+          <div class="filters">
+            <select id="filter-rundown-event">
+              <option value="">Semua Sesi Acara</option>
+              <option value="Akad / Pemberkatan">Akad / Pemberkatan</option>
+              <option value="Resepsi">Resepsi</option>
+              <option value="Lainnya">Lainnya</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" data-add="rundowns">+ Tambah Rundown</button>
+        </div>
+        <div class="table-wrap card">
+          <table>
+            <thead>
+              <tr>
+                <th>Sesi</th>
+                <th>Waktu</th>
+                <th>Kegiatan</th>
+                <th>PIC</th>
+                <th>Lokasi</th>
+                <th>Catatan</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-rundowns"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="tab-settings" class="tab-panel hidden">
+        <div class="grid-2">
+          <form id="profile-form" class="card form-stack">
+            <h3>Profil Pernikahan</h3>
+            <div class="field">
+              <label for="set-name">Nama Anda</label>
+              <input id="set-name" type="text" required />
+            </div>
+            <div class="field">
+              <label for="set-partner">Nama Pasangan</label>
+              <input id="set-partner" type="text" required />
+            </div>
+            <div class="field">
+              <label for="set-date">Tanggal Pernikahan</label>
+              <input id="set-date" type="date" />
+            </div>
+            <button type="submit" class="btn btn-primary">Simpan Profil</button>
+          </form>
+
+          <form id="api-form" class="card form-stack">
+            <h3>Koneksi Google Spreadsheet</h3>
+            <p class="muted">Tempel URL Web App dari Google Apps Script (`https://script.google.com/macros/s/.../exec`). Kosongkan untuk memakai Mode Demo lokal.</p>
+            <div class="field">
+              <label for="set-api-url">URL Web App Google Apps Script</label>
+              <input id="set-api-url" type="url" placeholder="https://script.google.com/macros/s/.../exec" />
+            </div>
+            <div class="btn-row">
+              <button type="submit" class="btn btn-primary">Simpan URL</button>
+              <button type="button" id="btn-export-json" class="btn btn-outline">Backup JSON</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL FORM (CRUD & API Config) -->
+  <div id="modal-backdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title">Form</h3>
+        <button type="button" id="modal-close" class="icon-btn" aria-label="Tutup">&times;</button>
+      </div>
+      <form id="modal-form" class="form-stack">
+        <div id="modal-fields" class="form-stack"></div>
+        <div class="modal-actions">
+          <button type="button" id="modal-cancel" class="btn btn-ghost">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

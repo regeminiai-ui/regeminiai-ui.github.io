@@ -1,0 +1,734 @@
+/**
+ * NikahPlan Frontend Controller
+ * Supports Google Apps Script Web App API + automatic local Demo Mode when API URL is unset.
+ */
+
+// Opsional: isi URL Web App Google Apps Script di sini agar semua user langsung terhubung
+const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxVRx8ozLI8-hRirJWBt5S53w_CO4Zep_470o4k6juu_JLto4-plKLWjXKTyh24a86_/exec';
+
+const STORAGE_KEYS = {
+  apiUrl: 'nikahplan_api_url',
+  token: 'nikahplan_token',
+  user: 'nikahplan_user',
+  demoDb: 'nikahplan_demo_db_v1',
+};
+
+const state = {
+  apiUrl: localStorage.getItem(STORAGE_KEYS.apiUrl) ?? DEFAULT_API_URL,
+  token: localStorage.getItem(STORAGE_KEYS.token) || '',
+  user: JSON.parse(localStorage.getItem(STORAGE_KEYS.user) || 'null'),
+  activeTab: 'dashboard',
+  data: {
+    budgets: [],
+    guests: [],
+    vendors: [],
+    checklists: [],
+    rundowns: [],
+  },
+  modalContext: null,
+};
+
+// Schema definitions for dynamic CRUD modals
+const MODULE_SCHEMAS = {
+  budgets: {
+    title: 'Anggaran',
+    fields: [
+      { key: 'category', label: 'Kategori', type: 'select', options: ['Venue & Dekorasi', 'Catering', 'Busana & MUA', 'Dokumentasi', 'Undangan & Souvenir', 'KUA / Penghulu', 'Lainnya'], required: true },
+      { key: 'item', label: 'Nama Item', type: 'text', required: true },
+      { key: 'estimated', label: 'Estimasi (Rp)', type: 'number', min: 0, default: 0 },
+      { key: 'actual', label: 'Biaya Aktual (Rp)', type: 'number', min: 0, default: 0 },
+      { key: 'paid', label: 'Sudah Dibayar (Rp)', type: 'number', min: 0, default: 0 },
+      { key: 'status', label: 'Status Pembayaran', type: 'select', options: ['Belum Bayar', 'DP', 'Lunas'], default: 'Belum Bayar' },
+      { key: 'notes', label: 'Catatan', type: 'text' },
+    ],
+  },
+  guests: {
+    title: 'Tamu Undangan',
+    fields: [
+      { key: 'name', label: 'Nama Tamu / Keluarga', type: 'text', required: true },
+      { key: 'side', label: 'Pihak', type: 'select', options: ['Mempelai Pria', 'Mempelai Wanita', 'Umum'], default: 'Umum' },
+      { key: 'group', label: 'Grup', type: 'select', options: ['Keluarga', 'Teman', 'Rekan Kerja', 'VIP'], default: 'Teman' },
+      { key: 'pax', label: 'Jumlah (Pax)', type: 'number', min: 1, default: 2 },
+      { key: 'rsvp', label: 'Status RSVP', type: 'select', options: ['Belum', 'Hadir', 'Tidak Hadir'], default: 'Belum' },
+      { key: 'phone', label: 'No. WhatsApp / HP', type: 'text' },
+      { key: 'notes', label: 'Catatan', type: 'text' },
+    ],
+  },
+  vendors: {
+    title: 'Vendor',
+    fields: [
+      { key: 'category', label: 'Kategori', type: 'select', options: ['WO / Planner', 'Venue', 'Catering', 'Dekorasi', 'MUA & Busana', 'Foto & Video', 'Entertainment', 'Lainnya'], required: true },
+      { key: 'name', label: 'Nama Vendor', type: 'text', required: true },
+      { key: 'pic', label: 'Nama PIC', type: 'text' },
+      { key: 'phone', label: 'Kontak / IG', type: 'text' },
+      { key: 'price', label: 'Harga Paket (Rp)', type: 'number', min: 0, default: 0 },
+      { key: 'dp_paid', label: 'DP Terbayar (Rp)', type: 'number', min: 0, default: 0 },
+      { key: 'status', label: 'Status', type: 'select', options: ['Survey', 'Deal', 'Lunas', 'Batal'], default: 'Survey' },
+      { key: 'notes', label: 'Catatan', type: 'text' },
+    ],
+  },
+  checklists: {
+    title: 'Tugas Checklist',
+    fields: [
+      { key: 'phase', label: 'Tahap Persiapan', type: 'select', options: ['H-6 Bulan', 'H-3 Bulan', 'H-1 Bulan', 'H-1 Minggu', 'Hari-H'], default: 'H-3 Bulan' },
+      { key: 'task', label: 'Nama Tugas', type: 'text', required: true },
+      { key: 'pic', label: 'Penanggung Jawab (PIC)', type: 'text' },
+      { key: 'due_date', label: 'Target Tanggal', type: 'date' },
+      { key: 'done', label: 'Status', type: 'select', options: ['Belum', 'Selesai'], default: 'Belum' },
+    ],
+  },
+  rundowns: {
+    title: 'Rundown Acara',
+    fields: [
+      { key: 'event_name', label: 'Sesi Acara', type: 'select', options: ['Akad / Pemberkatan', 'Resepsi', 'Lainnya'], default: 'Akad / Pemberkatan' },
+      { key: 'start_time', label: 'Jam Mulai', type: 'time', required: true },
+      { key: 'end_time', label: 'Jam Selesai', type: 'time', required: true },
+      { key: 'activity', label: 'Kegiatan', type: 'text', required: true },
+      { key: 'pic', label: 'PIC / Koordinator', type: 'text' },
+      { key: 'location', label: 'Lokasi', type: 'text' },
+      { key: 'notes', label: 'Catatan', type: 'text' },
+    ],
+  },
+};
+
+// --- Utilities ---
+const $ = (id) => document.getElementById(id);
+
+function formatRp(num) {
+  return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+}
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function showToast(msg, isError = false) {
+  const container = $('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${isError ? 'error' : ''}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function isDemoMode() {
+  return !state.apiUrl.trim();
+}
+
+// --- API Layer (Google Apps Script + Demo Fallback) ---
+async function apiCall(action, payload = {}) {
+  if (isDemoMode()) {
+    return demoApiCall(action, payload);
+  }
+
+  // Use text/plain to avoid CORS preflight OPTIONS on Google Apps Script
+  const res = await fetch(state.apiUrl.trim(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, token: state.token, payload }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+  const json = await res.json();
+  if (!json.ok) {
+    if (json.code === 'UNAUTHORIZED') {
+      logout(false);
+    }
+    throw new Error(json.error || 'Terjadi kesalahan server');
+  }
+  return json.data;
+}
+
+// --- Local Demo Mode (localStorage) ---
+function getDemoDb() {
+  const raw = localStorage.getItem(STORAGE_KEYS.demoDb);
+  if (raw) return JSON.parse(raw);
+  const seed = {
+    users: [],
+    budgets: [],
+    guests: [],
+    vendors: [],
+    checklists: [],
+    rundowns: [],
+  };
+  localStorage.setItem(STORAGE_KEYS.demoDb, JSON.stringify(seed));
+  return seed;
+}
+
+function saveDemoDb(db) {
+  localStorage.setItem(STORAGE_KEYS.demoDb, JSON.stringify(db));
+}
+
+function demoApiCall(action, payload) {
+  const db = getDemoDb();
+  const uid = () => 'id_' + Math.random().toString(36).slice(2, 10);
+
+  if (action === 'register') {
+    const email = (payload.email || '').trim().toLowerCase();
+    if (db.users.some((u) => u.email === email)) {
+      throw new Error('Email sudah terdaftar.');
+    }
+    const user = {
+      id: uid(),
+      email,
+      password: payload.password,
+      name: payload.name,
+      partner_name: payload.partner_name,
+      wedding_date: payload.wedding_date || '',
+    };
+    db.users.push(user);
+    saveDemoDb(db);
+    const { password, ...safeUser } = user;
+    return { token: 'demo_' + user.id, user: safeUser };
+  }
+
+  if (action === 'login') {
+    const email = (payload.email || '').trim().toLowerCase();
+    const user = db.users.find((u) => u.email === email && u.password === payload.password);
+    if (!user) throw new Error('Email atau password salah.');
+    const { password, ...safeUser } = user;
+    return { token: 'demo_' + user.id, user: safeUser };
+  }
+
+  // Authenticated actions in demo mode
+  const userId = state.token.replace('demo_', '');
+  const currentUser = db.users.find((u) => u.id === userId);
+  if (!currentUser) throw new Error('Sesi tidak valid. Silakan masuk ulang.');
+
+  if (action === 'updateProfile') {
+    currentUser.name = payload.name;
+    currentUser.partner_name = payload.partner_name;
+    currentUser.wedding_date = payload.wedding_date || '';
+    saveDemoDb(db);
+    const { password, ...safeUser } = currentUser;
+    return { user: safeUser };
+  }
+
+  if (action === 'getAll') {
+    return {
+      budgets: db.budgets.filter((r) => r.user_id === userId),
+      guests: db.guests.filter((r) => r.user_id === userId),
+      vendors: db.vendors.filter((r) => r.user_id === userId),
+      checklists: db.checklists.filter((r) => r.user_id === userId),
+      rundowns: db.rundowns.filter((r) => r.user_id === userId),
+    };
+  }
+
+  if (action === 'upsertItem') {
+    const { module, item } = payload;
+    const list = db[module];
+    if (!list) throw new Error('Modul tidak dikenal');
+    if (item.id) {
+      const idx = list.findIndex((r) => r.id === item.id && r.user_id === userId);
+      if (idx === -1) throw new Error('Data tidak ditemukan');
+      list[idx] = { ...list[idx], ...item, user_id: userId, updated_at: new Date().toISOString() };
+      saveDemoDb(db);
+      return { item: list[idx] };
+    } else {
+      const created = { ...item, id: uid(), user_id: userId, updated_at: new Date().toISOString() };
+      list.push(created);
+      saveDemoDb(db);
+      return { item: created };
+    }
+  }
+
+  if (action === 'deleteItem') {
+    const { module, id } = payload;
+    db[module] = db[module].filter((r) => !(r.id === id && r.user_id === userId));
+    saveDemoDb(db);
+    return { deleted: true };
+  }
+
+  throw new Error('Aksi tidak dikenal');
+}
+
+// --- Auth & Session ---
+function saveSession(token, user) {
+  state.token = token;
+  state.user = user;
+  localStorage.setItem(STORAGE_KEYS.token, token);
+  localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
+}
+
+function logout(notify = true) {
+  state.token = '';
+  state.user = null;
+  localStorage.removeItem(STORAGE_KEYS.token);
+  localStorage.removeItem(STORAGE_KEYS.user);
+  renderAuthOrApp();
+  if (notify) showToast('Anda telah keluar.');
+}
+
+function updateModeBanner() {
+  const banner = $('mode-banner');
+  const badge = $('connection-badge');
+  if (isDemoMode()) {
+    banner.textContent = 'Mode Demo Aktif (data tersimpan di browser ini). Atur URL Google Apps Script untuk sinkron ke Google Sheets.';
+    banner.classList.remove('hidden');
+    badge.textContent = 'Mode Demo (Lokal)';
+    badge.className = 'badge badge-warn';
+  } else {
+    banner.classList.add('hidden');
+    badge.textContent = 'Google Sheets Aktif';
+    badge.className = 'badge badge-ok';
+  }
+}
+
+function renderAuthOrApp() {
+  updateModeBanner();
+  if (state.token && state.user) {
+    $('auth-view').classList.add('hidden');
+    $('app-view').classList.remove('hidden');
+    renderUserHeader();
+    loadAllData();
+  } else {
+    $('app-view').classList.add('hidden');
+    $('auth-view').classList.remove('hidden');
+  }
+}
+
+function renderUserHeader() {
+  const u = state.user;
+  $('sidebar-couple').textContent = `${u.name} & ${u.partner_name}`;
+  $('set-name').value = u.name || '';
+  $('set-partner').value = u.partner_name || '';
+  $('set-date').value = u.wedding_date || '';
+  $('set-api-url').value = state.apiUrl || '';
+
+  const cd = $('wedding-countdown');
+  if (u.wedding_date) {
+    const target = new Date(u.wedding_date + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+    if (diffDays > 0) cd.textContent = `H-${diffDays} menuju hari bahagia (${u.wedding_date})`;
+    else if (diffDays === 0) cd.textContent = 'Hari ini adalah Hari Pernikahan Anda!';
+    else cd.textContent = `Tanggal pernikahan: ${u.wedding_date}`;
+  } else {
+    cd.textContent = 'Atur tanggal pernikahan di Pengaturan';
+  }
+}
+
+async function loadAllData() {
+  try {
+    const res = await apiCall('getAll');
+    state.data = {
+      budgets: res.budgets || [],
+      guests: res.guests || [],
+      vendors: res.vendors || [],
+      checklists: res.checklists || [],
+      rundowns: res.rundowns || [],
+    };
+    renderAll();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+// --- Rendering ---
+function renderAll() {
+  renderDashboard();
+  renderBudgets();
+  renderGuests();
+  renderVendors();
+  renderChecklists();
+  renderRundowns();
+}
+
+function statusBadge(text) {
+  const map = {
+    Lunas: 'badge-ok',
+    Hadir: 'badge-ok',
+    Selesai: 'badge-ok',
+    Deal: 'badge-ok',
+    DP: 'badge-warn',
+    Survey: 'badge-warn',
+    Belum: 'badge-neutral',
+    'Belum Bayar': 'badge-neutral',
+    'Tidak Hadir': 'badge-bad',
+    Batal: 'badge-bad',
+  };
+  return `<span class="badge ${map[text] || 'badge-neutral'}">${escapeHtml(text)}</span>`;
+}
+
+function renderDashboard() {
+  const { budgets, guests, vendors, checklists, rundowns } = state.data;
+
+  const estTotal = budgets.reduce((s, b) => s + Number(b.estimated || 0), 0);
+  const paidTotal = budgets.reduce((s, b) => s + Number(b.paid || 0), 0);
+  $('stat-budget-est').textContent = formatRp(estTotal);
+  $('stat-budget-paid').textContent = `Terbayar: ${formatRp(paidTotal)}`;
+
+  const totalPax = guests.reduce((s, g) => s + Number(g.pax || 0), 0);
+  const hadirPax = guests.filter((g) => g.rsvp === 'Hadir').reduce((s, g) => s + Number(g.pax || 0), 0);
+  $('stat-guests-total').textContent = `${totalPax} Orang`;
+  $('stat-guests-rsvp').textContent = `Hadir: ${hadirPax} orang (${guests.length} undangan)`;
+
+  const dealVendors = vendors.filter((v) => v.status === 'Deal' || v.status === 'Lunas').length;
+  $('stat-vendors-total').textContent = `${vendors.length} Vendor`;
+  $('stat-vendors-deal').textContent = `Deal/Lunas: ${dealVendors}`;
+
+  const doneCount = checklists.filter((c) => c.done === 'Selesai').length;
+  const pct = checklists.length ? Math.round((doneCount / checklists.length) * 100) : 0;
+  $('stat-checklist-pct').textContent = `${pct}%`;
+  $('stat-checklist-count').textContent = `${doneCount} / ${checklists.length} selesai`;
+
+  const pendingTasks = checklists.filter((c) => c.done !== 'Selesai').slice(0, 5);
+  $('dash-checklist').innerHTML = pendingTasks.length
+    ? pendingTasks.map((c) => `<li><span>${escapeHtml(c.task)}</span><span class="muted">${escapeHtml(c.phase)}</span></li>`).join('')
+    : '<li class="muted">Belum ada tugas tertunda.</li>';
+
+  const sortedRundown = [...rundowns].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '')).slice(0, 5);
+  $('dash-rundown').innerHTML = sortedRundown.length
+    ? sortedRundown.map((r) => `<li><span>${escapeHtml(r.start_time)} - ${escapeHtml(r.activity)}</span><span class="muted">${escapeHtml(r.event_name)}</span></li>`).join('')
+    : '<li class="muted">Belum ada jadwal rundown.</li>';
+}
+
+function actionButtons(module, id) {
+  return `
+    <button type="button" class="btn btn-sm btn-outline" onclick="openEditModal('${module}', '${id}')">Edit</button>
+    <button type="button" class="btn btn-sm btn-danger" onclick="deleteRecord('${module}', '${id}')">Hapus</button>
+  `;
+}
+
+function renderBudgets() {
+  const q = $('filter-budget-search').value.toLowerCase();
+  const st = $('filter-budget-status').value;
+  const rows = state.data.budgets.filter((b) =>
+    (!q || (b.item + ' ' + b.category).toLowerCase().includes(q)) &&
+    (!st || b.status === st)
+  );
+  $('tbody-budgets').innerHTML = rows.length
+    ? rows.map((b) => `
+      <tr>
+        <td>${escapeHtml(b.category)}</td>
+        <td><strong>${escapeHtml(b.item)}</strong>${b.notes ? `<div class="muted">${escapeHtml(b.notes)}</div>` : ''}</td>
+        <td>${formatRp(b.estimated)}</td>
+        <td>${formatRp(b.actual)}</td>
+        <td>${formatRp(b.paid)}</td>
+        <td>${statusBadge(b.status)}</td>
+        <td>${actionButtons('budgets', b.id)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" class="muted">Belum ada data anggaran.</td></tr>';
+}
+
+function renderGuests() {
+  const q = $('filter-guest-search').value.toLowerCase();
+  const rsvp = $('filter-guest-rsvp').value;
+  const rows = state.data.guests.filter((g) =>
+    (!q || (g.name + ' ' + g.group).toLowerCase().includes(q)) &&
+    (!rsvp || g.rsvp === rsvp)
+  );
+  $('tbody-guests').innerHTML = rows.length
+    ? rows.map((g) => `
+      <tr>
+        <td><strong>${escapeHtml(g.name)}</strong>${g.notes ? `<div class="muted">${escapeHtml(g.notes)}</div>` : ''}</td>
+        <td>${escapeHtml(g.side)}</td>
+        <td>${escapeHtml(g.group)}</td>
+        <td>${escapeHtml(g.pax)}</td>
+        <td>${statusBadge(g.rsvp)}</td>
+        <td>${escapeHtml(g.phone || '-')}</td>
+        <td>${actionButtons('guests', g.id)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" class="muted">Belum ada daftar tamu.</td></tr>';
+}
+
+function renderVendors() {
+  const q = $('filter-vendor-search').value.toLowerCase();
+  const st = $('filter-vendor-status').value;
+  const rows = state.data.vendors.filter((v) =>
+    (!q || (v.name + ' ' + v.category).toLowerCase().includes(q)) &&
+    (!st || v.status === st)
+  );
+  $('tbody-vendors').innerHTML = rows.length
+    ? rows.map((v) => `
+      <tr>
+        <td>${escapeHtml(v.category)}</td>
+        <td><strong>${escapeHtml(v.name)}</strong>${v.notes ? `<div class="muted">${escapeHtml(v.notes)}</div>` : ''}</td>
+        <td>${escapeHtml(v.pic || '-')}</td>
+        <td>${escapeHtml(v.phone || '-')}</td>
+        <td>${formatRp(v.price)}</td>
+        <td>${formatRp(v.dp_paid)}</td>
+        <td>${statusBadge(v.status)}</td>
+        <td>${actionButtons('vendors', v.id)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="8" class="muted">Belum ada data vendor.</td></tr>';
+}
+
+function renderChecklists() {
+  const phase = $('filter-checklist-phase').value;
+  const rows = state.data.checklists.filter((c) => !phase || c.phase === phase);
+  $('tbody-checklists').innerHTML = rows.length
+    ? rows.map((c) => `
+      <tr>
+        <td>
+          <input type="checkbox" ${c.done === 'Selesai' ? 'checked' : ''} onchange="toggleChecklist('${c.id}', this.checked)" />
+        </td>
+        <td>${escapeHtml(c.phase)}</td>
+        <td style="${c.done === 'Selesai' ? 'text-decoration:line-through;color:var(--muted)' : ''}">${escapeHtml(c.task)}</td>
+        <td>${escapeHtml(c.pic || '-')}</td>
+        <td>${escapeHtml(c.due_date || '-')}</td>
+        <td>${actionButtons('checklists', c.id)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" class="muted">Belum ada tugas checklist.</td></tr>';
+}
+
+function renderRundowns() {
+  const ev = $('filter-rundown-event').value;
+  const rows = state.data.rundowns
+    .filter((r) => !ev || r.event_name === ev)
+    .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+  $('tbody-rundowns').innerHTML = rows.length
+    ? rows.map((r) => `
+      <tr>
+        <td>${escapeHtml(r.event_name)}</td>
+        <td>${escapeHtml(r.start_time)} - ${escapeHtml(r.end_time)}</td>
+        <td><strong>${escapeHtml(r.activity)}</strong></td>
+        <td>${escapeHtml(r.pic || '-')}</td>
+        <td>${escapeHtml(r.location || '-')}</td>
+        <td>${escapeHtml(r.notes || '-')}</td>
+        <td>${actionButtons('rundowns', r.id)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" class="muted">Belum ada jadwal rundown.</td></tr>';
+}
+
+// --- CRUD Modal & Actions ---
+function openModal(module, existingItem = null) {
+  const schema = MODULE_SCHEMAS[module];
+  state.modalContext = { type: 'crud', module, id: existingItem?.id || null };
+  $('modal-title').textContent = (existingItem ? 'Edit ' : 'Tambah ') + schema.title;
+
+  $('modal-fields').innerHTML = schema.fields.map((f) => {
+    const val = existingItem ? (existingItem[f.key] ?? '') : (f.default ?? '');
+    if (f.type === 'select') {
+      const opts = f.options.map((o) => `<option value="${escapeHtml(o)}" ${val === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
+      return `<div class="field"><label>${escapeHtml(f.label)}</label><select name="${f.key}" ${f.required ? 'required' : ''}>${opts}</select></div>`;
+    }
+    return `<div class="field"><label>${escapeHtml(f.label)}</label><input type="${f.type}" name="${f.key}" value="${escapeHtml(val)}" ${f.min !== undefined ? `min="${f.min}"` : ''} ${f.required ? 'required' : ''} /></div>`;
+  }).join('');
+
+  $('modal-backdrop').classList.remove('hidden');
+}
+
+function openApiConfigModal() {
+  state.modalContext = { type: 'apiConfig' };
+  $('modal-title').textContent = 'Konfigurasi Google Apps Script';
+  $('modal-fields').innerHTML = `
+    <p class="muted">Masukkan URL Web App Google Apps Script Anda. Kosongkan untuk mencoba Mode Demo lokal terlebih dahulu.</p>
+    <div class="field">
+      <label>URL Web App (/exec)</label>
+      <input type="url" name="apiUrl" value="${escapeHtml(state.apiUrl)}" placeholder="https://script.google.com/macros/s/.../exec" />
+    </div>
+  `;
+  $('modal-backdrop').classList.remove('hidden');
+}
+
+function closeModal() {
+  $('modal-backdrop').classList.add('hidden');
+  state.modalContext = null;
+}
+
+window.openEditModal = (module, id) => {
+  const item = state.data[module].find((r) => r.id === id);
+  if (item) openModal(module, item);
+};
+
+window.deleteRecord = async (module, id) => {
+  if (!confirm('Hapus data ini?')) return;
+  try {
+    await apiCall('deleteItem', { module, id });
+    state.data[module] = state.data[module].filter((r) => r.id !== id);
+    renderAll();
+    showToast('Data dihapus.');
+  } catch (err) {
+    showToast(err.message, true);
+  }
+};
+
+window.toggleChecklist = async (id, checked) => {
+  const item = state.data.checklists.find((c) => c.id === id);
+  if (!item) return;
+  const updated = { ...item, done: checked ? 'Selesai' : 'Belum' };
+  try {
+    const res = await apiCall('upsertItem', { module: 'checklists', item: updated });
+    const idx = state.data.checklists.findIndex((c) => c.id === id);
+    state.data.checklists[idx] = res.item;
+    renderAll();
+  } catch (err) {
+    showToast(err.message, true);
+    renderChecklists();
+  }
+};
+
+// --- Navigation ---
+function switchTab(tab) {
+  state.activeTab = tab;
+  document.querySelectorAll('.nav-item').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach((panel) => {
+    panel.classList.toggle('hidden', panel.id !== `tab-${tab}`);
+  });
+  const titles = {
+    dashboard: 'Ringkasan',
+    budgets: 'Anggaran Pernikahan',
+    guests: 'Daftar Tamu & RSVP',
+    vendors: 'Manajemen Vendor',
+    checklists: 'Checklist Persiapan',
+    rundowns: 'Rundown Acara',
+    settings: 'Pengaturan',
+  };
+  $('page-title').textContent = titles[tab] || 'NikahPlan';
+}
+
+// --- Event Listeners ---
+document.addEventListener('DOMContentLoaded', () => {
+  // Auth tabs
+  document.querySelectorAll('.auth-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.authTab;
+      document.querySelectorAll('.auth-tab').forEach((b) => b.classList.toggle('active', b === btn));
+      $('login-form').classList.toggle('hidden', target !== 'login');
+      $('register-form').classList.toggle('hidden', target !== 'register');
+    });
+  });
+
+  // Login submit
+  $('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const res = await apiCall('login', {
+        email: $('login-email').value,
+        password: $('login-password').value,
+      });
+      saveSession(res.token, res.user);
+      renderAuthOrApp();
+      showToast('Berhasil masuk!');
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  // Register submit
+  $('register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const res = await apiCall('register', {
+        name: $('reg-name').value,
+        partner_name: $('reg-partner').value,
+        wedding_date: $('reg-date').value,
+        email: $('reg-email').value,
+        password: $('reg-password').value,
+      });
+      saveSession(res.token, res.user);
+      renderAuthOrApp();
+      showToast('Akun berhasil dibuat!');
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  // Navigation
+  document.querySelectorAll('.nav-item').forEach((btn) => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+  document.querySelectorAll('[data-jump]').forEach((btn) => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.jump));
+  });
+
+  // Add buttons
+  document.querySelectorAll('[data-add]').forEach((btn) => {
+    btn.addEventListener('click', () => openModal(btn.dataset.add));
+  });
+
+  // Filters
+  ['filter-budget-search', 'filter-budget-status'].forEach((id) => $(id).addEventListener('input', renderBudgets));
+  ['filter-guest-search', 'filter-guest-rsvp'].forEach((id) => $(id).addEventListener('input', renderGuests));
+  ['filter-vendor-search', 'filter-vendor-status'].forEach((id) => $(id).addEventListener('input', renderVendors));
+  $('filter-checklist-phase').addEventListener('change', renderChecklists);
+  $('filter-rundown-event').addEventListener('change', renderRundowns);
+
+  // Modal handlers
+  $('modal-close').addEventListener('click', closeModal);
+  $('modal-cancel').addEventListener('click', closeModal);
+  $('btn-open-api-config').addEventListener('click', openApiConfigModal);
+
+  $('modal-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const ctx = state.modalContext;
+
+    if (ctx?.type === 'apiConfig') {
+      state.apiUrl = (formData.get('apiUrl') || '').toString().trim();
+      localStorage.setItem(STORAGE_KEYS.apiUrl, state.apiUrl);
+      updateModeBanner();
+      closeModal();
+      showToast('URL Google Apps Script diperbarui.');
+      return;
+    }
+
+    if (ctx?.type === 'crud') {
+      const item = Object.fromEntries(formData.entries());
+      if (ctx.id) item.id = ctx.id;
+      try {
+        const res = await apiCall('upsertItem', { module: ctx.module, item });
+        const list = state.data[ctx.module];
+        if (ctx.id) {
+          const idx = list.findIndex((r) => r.id === ctx.id);
+          if (idx !== -1) list[idx] = res.item;
+        } else {
+          list.push(res.item);
+        }
+        renderAll();
+        closeModal();
+        showToast('Data tersimpan.');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+  });
+
+  // Settings forms
+  $('profile-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const res = await apiCall('updateProfile', {
+        name: $('set-name').value,
+        partner_name: $('set-partner').value,
+        wedding_date: $('set-date').value,
+      });
+      saveSession(state.token, res.user);
+      renderUserHeader();
+      showToast('Profil diperbarui.');
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  $('api-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    state.apiUrl = $('set-api-url').value.trim();
+    localStorage.setItem(STORAGE_KEYS.apiUrl, state.apiUrl);
+    updateModeBanner();
+    showToast('URL koneksi disimpan. Silakan login ulang jika berpindah server.');
+  });
+
+  $('btn-export-json').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify({ user: state.user, data: state.data }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `nikahplan-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+  });
+
+  $('btn-refresh').addEventListener('click', loadAllData);
+  $('btn-logout').addEventListener('click', () => logout(true));
+
+  renderAuthOrApp();
+});
