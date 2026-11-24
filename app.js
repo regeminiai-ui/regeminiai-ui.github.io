@@ -3066,9 +3066,9 @@ window.copyGuestPersonalLink = async (guestId) => {
   const url = `${base}?guest_checkin=${encodeURIComponent(state.user.id)}&guest_id=${encodeURIComponent(guestId)}`;
   try {
     await navigator.clipboard.writeText(url);
-    showToast('Link scan QR pribadi tamu disalin!');
+    showToast('Link undangan & absen hadir tamu disalin!');
   } catch {
-    prompt('Salin link tamu ini:', url);
+    prompt('Salin link undangan tamu ini:', url);
   }
 };
 
@@ -3078,12 +3078,38 @@ async function initGuestScannerView(userId, guestId) {
   $('checkin-view').classList.add('hidden');
   $('guest-scanner-view').classList.remove('hidden');
 
+  let guestName = 'Tamu Undangan';
   try {
     const info = await apiCall('publicEventInfo', { user_id: userId, guest_id: guestId });
     $('gs-couple').textContent = `${info.name} & ${info.partner_name}`;
-    const guestName = info.guest ? info.guest.name : 'Tamu Undangan';
-    $('gs-guest-greeting').textContent = `Halo, ${guestName}!`;
-    $('gs-watermark')?.classList.toggle('hidden', info.tier === 'rich');
+    const dateStr = formatDateId(info.wedding_date);
+    $('gs-wedding-date').textContent = dateStr || 'Hari Bahagia Kami';
+
+    if (info.wedding_date) {
+      const targetMs = new Date(normalizeDateStr(info.wedding_date) + 'T08:00:00').getTime();
+      const diffDays = Math.ceil((targetMs - Date.now()) / 86400000);
+      const cdEl = $('gs-countdown');
+      if (cdEl && !isNaN(diffDays)) {
+        cdEl.textContent = diffDays > 0 ? `H-${diffDays} Menuju Hari Bahagia` : (diffDays === 0 ? 'Hari Bahagia Telah Tiba!' : 'Terima Kasih Atas Doa Restu Anda');
+        cdEl.classList.remove('hidden');
+      }
+    }
+
+    guestName = info.guest ? info.guest.name : 'Tamu Undangan';
+    $('gs-guest-greeting').textContent = guestName;
+    $('gs-guest-pax').textContent = info.guest ? `Undangan berlaku untuk ${info.guest.pax || 1} orang` : '';
+
+    const rundowns = info.rundowns || [];
+    if (rundowns.length && $('gs-rundown-list')) {
+      $('gs-rundown-list').innerHTML = rundowns.map((r) => `
+        <li>
+          <strong>${escapeHtml(r.time || '-')} • ${escapeHtml(r.agenda || '')}</strong>
+          ${r.location ? `<span class="muted">${escapeHtml(r.location)}</span>` : ''}
+        </li>`).join('');
+      $('gs-rundown-box')?.classList.remove('hidden');
+    }
+
+    $('gs-watermark')?.classList.toggle('hidden', info.tier === 'rich' || info.tier === 'konglo');
     if (info.guest && info.guest.rsvp === 'Hadir') {
       $('gs-scan-box').classList.add('hidden');
       $('gs-success-msg').textContent = `Terima kasih ${guestName}, kehadiran Anda sudah tercatat Hadir.`;
@@ -3094,8 +3120,23 @@ async function initGuestScannerView(userId, guestId) {
     showToast(err.message, true);
   }
 
+  $('btn-direct-checkin')?.addEventListener('click', () => {
+    const btn = $('btn-direct-checkin');
+    withButtonLock(btn, 'Mencatat kehadiran...', async () => {
+      try {
+        const res = await apiCall('publicGuestQrCheckin', { user_id: userId, guest_id: guestId });
+        $('gs-scan-box').classList.add('hidden');
+        $('gs-success-msg').textContent = `Terima kasih ${res.guest?.name || guestName}, status Anda otomatis tercatat Hadir!`;
+        $('gs-scan-success').classList.remove('hidden');
+        showToast('Kehadiran berhasil tercatat!');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    });
+  });
+
   let scanner = null;
-  $('btn-start-scan').addEventListener('click', async () => {
+  $('btn-start-scan')?.addEventListener('click', async () => {
     const btn = $('btn-start-scan');
     if (typeof Html5Qrcode === 'undefined') {
       showToast('Library kamera QR belum termuat. Refresh halaman.', true);
@@ -3113,7 +3154,7 @@ async function initGuestScannerView(userId, guestId) {
             await scanner.stop().catch(() => {});
             const res = await apiCall('publicGuestQrCheckin', { user_id: userId, guest_id: guestId });
             $('gs-scan-box').classList.add('hidden');
-            $('gs-success-msg').textContent = `Terima kasih ${res.guest?.name || ''}, status Anda otomatis tercatat Hadir!`;
+            $('gs-success-msg').textContent = `Terima kasih ${res.guest?.name || guestName}, status Anda otomatis tercatat Hadir!`;
             $('gs-scan-success').classList.remove('hidden');
             showToast('Kehadiran berhasil tercatat!');
           } else {
@@ -3125,7 +3166,7 @@ async function initGuestScannerView(userId, guestId) {
       btn.textContent = 'Kamera Aktif — Arahkan ke QR';
     } catch (err) {
       btn.disabled = false;
-      btn.textContent = 'Buka Kamera Scan QR';
+      btn.textContent = 'Scan QR di Lokasi Acara';
       showToast('Gagal membuka kamera: ' + (err.message || err), true);
     }
   });

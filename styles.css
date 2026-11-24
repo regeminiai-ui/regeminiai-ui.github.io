@@ -789,6 +789,110 @@ h1, h2, h3, .brand-title {
   gap: 8px;
 }
 
+/* Digital Guest Invitation + Check-In */
+.invite-card {
+  max-width: 520px;
+  text-align: center;
+}
+
+.invite-eyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-top: 6px;
+}
+
+.invite-couple {
+  font-size: 2.1rem;
+  margin: 4px 0 6px;
+}
+
+.invite-countdown {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-soft);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.invite-guest-box {
+  margin: 18px 0 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  border: 1.5px dashed var(--border-soft);
+}
+
+.invite-to {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.invite-guest-box h3 {
+  margin: 0 0 4px;
+}
+
+.invite-quote {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--muted);
+  margin: 0 0 16px;
+}
+
+.invite-rundown {
+  text-align: left;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  border: 1px solid var(--border-soft);
+}
+
+.invite-rundown h4 {
+  margin: 0 0 10px;
+  text-align: center;
+}
+
+.invite-rundown-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.invite-rundown-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border-soft);
+  font-size: 0.88rem;
+}
+
+.invite-rundown-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.invite-checkin-box {
+  padding-top: 14px;
+  border-top: 1.5px dashed var(--border-soft);
+  text-align: center;
+}
+
+.invite-checkin-box h4 {
+  margin: 0;
+}
+
 [data-theme="dark"] .promo-banner {
   background: linear-gradient(135deg, #3d2529, #4a232b);
   color: #f9b4c0;

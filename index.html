@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
   <link rel="icon" type="image/png" href="assets/img/logo-light.png" />
-  <link rel="stylesheet" href="styles.css?v=60" />
+  <link rel="stylesheet" href="styles.css?v=61" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -414,22 +414,41 @@
     </div>
   </section>
 
-  <!-- PERSONAL GUEST QR SCANNER VIEW (?guest_checkin=...&guest_id=...) -->
+  <!-- PERSONAL GUEST INVITATION + CHECK-IN VIEW (?guest_checkin=...&guest_id=...) -->
   <section id="guest-scanner-view" class="auth-wrapper hidden">
-    <div class="auth-card">
+    <div class="auth-card invite-card">
       <div class="auth-brand">
         <span class="brand-mark" aria-hidden="true">
           <img class="brand-logo brand-logo-light" src="assets/img/logo-light.png" alt="My Weeding Plan" />
           <img class="brand-logo brand-logo-dark" src="assets/img/logo-dark.png" alt="My Weeding Plan" />
         </span>
-        <h1 id="gs-couple">Undangan Pernikahan</h1>
-        <p id="gs-guest-greeting" class="muted">Memuat data tamu...</p>
+        <div class="invite-eyebrow">The Wedding Of</div>
+        <h1 id="gs-couple" class="invite-couple">Undangan Pernikahan</h1>
+        <p id="gs-wedding-date" class="muted">Memuat tanggal acara...</p>
+        <div id="gs-countdown" class="invite-countdown hidden"></div>
       </div>
 
-      <div id="gs-scan-box" class="form-stack">
-        <p class="muted" style="text-align:center">Arahkan kamera ke <strong>QR Code</strong> di meja penerima tamu untuk mencatat kehadiran Anda.</p>
+      <div class="invite-guest-box">
+        <div class="invite-to">Kepada Yth. Bapak/Ibu/Saudara/i</div>
+        <h3 id="gs-guest-greeting">Memuat data tamu...</h3>
+        <p id="gs-guest-pax" class="muted"></p>
+      </div>
+
+      <p class="invite-quote">
+        Dengan memohon rahmat dan ridho Allah SWT, kami mengundang Anda untuk menghadiri hari bahagia pernikahan kami serta memberikan doa restu.
+      </p>
+
+      <div id="gs-rundown-box" class="invite-rundown hidden">
+        <h4>Susunan &amp; Lokasi Acara</h4>
+        <ul id="gs-rundown-list" class="invite-rundown-list"></ul>
+      </div>
+
+      <div id="gs-scan-box" class="invite-checkin-box form-stack">
+        <h4>Konfirmasi &amp; Absen Kehadiran</h4>
+        <p class="muted">Silakan klik tombol di bawah untuk mencatat kehadiran Anda, atau scan QR Code di meja penerima tamu.</p>
+        <button type="button" id="btn-direct-checkin" class="btn btn-primary btn-full">Absen Hadir Sekarang</button>
         <div id="qr-reader"></div>
-        <button type="button" id="btn-start-scan" class="btn btn-primary btn-full">Buka Kamera Scan QR</button>
+        <button type="button" id="btn-start-scan" class="btn btn-outline btn-full">Scan QR di Lokasi Acara</button>
       </div>
 
       <div id="gs-scan-success" class="checkin-success hidden">
@@ -929,7 +948,7 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="ai-planner.js?v=60"></script>
-  <script src="app.js?v=60"></script>
+  <script src="ai-planner.js?v=61"></script>
+  <script src="app.js?v=61"></script>
 </body>
 </html>
