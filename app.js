@@ -1204,8 +1204,16 @@ async function loadAllData() {
       state.user.status = res.plan.status;
       state.user.expires_at = res.plan.expires_at;
       state.user.max_guests = Number(res.plan.max_guests || 0);
+      if (res.plan.name !== undefined) state.user.name = res.plan.name;
+      if (res.plan.partner_name !== undefined) state.user.partner_name = res.plan.partner_name;
+      if (res.plan.partner_email !== undefined) state.user.partner_email = res.plan.partner_email;
+      if (res.plan.wedding_date !== undefined) state.user.wedding_date = res.plan.wedding_date;
+      if (res.plan.drive_folder_id !== undefined) state.user.drive_folder_id = res.plan.drive_folder_id;
+      if (res.plan.invite_template !== undefined) state.user.invite_template = res.plan.invite_template;
+      if (res.plan.maps_url !== undefined) state.user.maps_url = res.plan.maps_url;
+      if (res.plan.gift_info !== undefined) state.user.gift_info = res.plan.gift_info;
       localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(state.user));
-      applyTierUi();
+      renderUserHeader();
     }
     state.data = {
       budgets: res.budgets || [],
