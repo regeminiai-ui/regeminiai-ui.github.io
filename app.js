@@ -3235,10 +3235,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+function getPersonalInviteUrl(guestId) {
+  const base = window.location.origin + window.location.pathname;
+  const tplId = state.user?.invite_template || 'tpl-01';
+  return `${base}?guest_checkin=${encodeURIComponent(state.user.id)}&guest_id=${encodeURIComponent(guestId)}&tpl=${encodeURIComponent(tplId)}`;
+}
+
 window.copyGuestPersonalLink = async (guestId) => {
   if (!state.user?.id) return;
-  const base = window.location.origin + window.location.pathname;
-  const url = `${base}?guest_checkin=${encodeURIComponent(state.user.id)}&guest_id=${encodeURIComponent(guestId)}`;
+  const url = getPersonalInviteUrl(guestId);
   try {
     await navigator.clipboard.writeText(url);
     showToast('Link undangan & absen hadir tamu disalin!');
@@ -3271,8 +3276,7 @@ function markWaSent(guestId) {
 function buildGuestWaUrl(guest) {
   const num = formatWaPhone(guest.phone);
   if (!num) return '';
-  const base = window.location.origin + window.location.pathname;
-  const link = `${base}?guest_checkin=${encodeURIComponent(state.user.id)}&guest_id=${encodeURIComponent(guest.id)}`;
+  const link = getPersonalInviteUrl(guest.id);
   const dateStr = state.user?.wedding_date ? formatDateId(state.user.wedding_date) : '';
   const msg = `Assalamu'alaikum / Salam sejahtera Bapak/Ibu/Saudara/i *${guest.name}*,\n\nDengan memohon doa restu, kami mengundang Anda untuk menghadiri pernikahan kami:\n*${state.user.name} & ${state.user.partner_name}*${dateStr ? `\nTanggal: ${dateStr}` : ''}\n\nSilakan buka link undangan pribadi & scan QR kehadiran Anda di bawah ini:\n${link}\n\nTerima kasih.`;
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
@@ -3321,6 +3325,12 @@ async function initGuestScannerView(userId, guestId) {
   $('app-view').classList.add('hidden');
   $('checkin-view').classList.add('hidden');
   $('guest-scanner-view').classList.remove('hidden');
+
+  const urlTpl = new URLSearchParams(window.location.search).get('tpl');
+  if (urlTpl && window.InvitationTemplates && window.InvitationRenderer) {
+    const preTpl = window.InvitationTemplates.getTemplateByIdForTier(urlTpl, 'konglo');
+    if (preTpl) window.InvitationRenderer.renderInvitationTheme($('guest-scanner-view'), $('gs-crest'), preTpl);
+  }
 
   let guestName = 'Tamu Undangan';
   try {
@@ -3438,6 +3448,9 @@ async function initGuestScannerView(userId, guestId) {
     }
   } catch (err) {
     showToast(err.message, true);
+  } finally {
+    $('gs-loader')?.classList.add('hidden');
+    $('gs-invite-content')?.classList.remove('hidden');
   }
 
   let scanner = null;
@@ -3557,7 +3570,7 @@ async function initCheckinView(userId) {
     $('checkin-couple').textContent = `${info.name} & ${info.partner_name}`;
     const dateStr = formatDateId(info.wedding_date);
     $('checkin-date').textContent = dateStr ? `Buku Tamu • ${dateStr}` : 'Buku Tamu Pernikahan';
-    $('checkin-watermark')?.classList.toggle('hidden', info.tier === 'rich');
+    $('checkin-watermark')?.classList.toggle('hidden', info.tier === 'rich' || info.tier === 'konglo');
   } catch (err) {
     showToast(err.message, true);
   }

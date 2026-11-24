@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
   <link rel="icon" type="image/png" href="assets/img/logo-light.png" />
-  <link rel="stylesheet" href="styles.css?v=74" />
-  <link rel="stylesheet" href="template/invite.css?v=74" />
+  <link rel="stylesheet" href="styles.css?v=75" />
+  <link rel="stylesheet" href="template/invite.css?v=75" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Great+Vibes&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -430,7 +430,11 @@
   <!-- PERSONAL GUEST INVITATION + CHECK-IN VIEW (?guest_checkin=...&guest_id=...) -->
   <section id="guest-scanner-view" class="auth-wrapper hidden">
     <div class="auth-card invite-card">
-      <div class="invite-inner-frame">
+      <div id="gs-loader" class="invite-loader">
+        <svg class="invite-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9" opacity="0.25"/><path d="M21 12a9 9 0 0 0-9-9" stroke-linecap="round"/></svg>
+        <p class="muted" style="margin:10px 0 0;font-weight:600;">Membuka Undangan...</p>
+      </div>
+      <div id="gs-invite-content" class="invite-inner-frame hidden">
         <div class="auth-brand">
           <div id="gs-crest"></div>
           <div class="invite-eyebrow">The Wedding Of</div>
@@ -1025,9 +1029,9 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="template/catalog.js?v=74"></script>
-  <script src="template/renderer.js?v=74"></script>
-  <script src="ai-planner.js?v=74"></script>
-  <script src="app.js?v=74"></script>
+  <script src="template/catalog.js?v=75"></script>
+  <script src="template/renderer.js?v=75"></script>
+  <script src="ai-planner.js?v=75"></script>
+  <script src="app.js?v=75"></script>
 </body>
 </html>
