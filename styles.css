@@ -380,6 +380,7 @@ h1, h2, h3, .brand-title {
   border-radius: 50%;
   overflow: hidden;
   border: 1.5px solid var(--border-soft);
+  background: var(--bg-soft, #fdf6f7);
   flex-shrink: 0;
 }
 
@@ -389,23 +390,10 @@ h1, h2, h3, .brand-title {
   margin: 0 auto 8px;
 }
 
-.brand-logo {
+.brand-logo-svg {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-}
-
-.brand-logo-dark {
-  display: none;
-}
-
-[data-theme="dark"] .brand-logo-light {
-  display: none;
-}
-
-[data-theme="dark"] .brand-logo-dark {
-  display: block;
 }
 
 /* Loading Shimmer Animation for Cards & Tables */
