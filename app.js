@@ -2233,8 +2233,6 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.auth-tab').forEach((b) => b.classList.toggle('active', b === btn));
       $('login-form').classList.toggle('hidden', target !== 'login');
       $('register-form').classList.toggle('hidden', target !== 'register');
-      $('pricing-showcase')?.classList.toggle('hidden', target !== 'register');
-      $('auth-view')?.classList.toggle('with-pricing', target === 'register');
     });
   });
 
