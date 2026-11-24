@@ -531,6 +531,15 @@ function demoApiCall(action, payload) {
       saveDemoDb(db);
       return { deleted: true };
     }
+    if (action === 'adminDeactivateLicense') {
+      const lic = db.licenses.find((x) => x.code === payload.code);
+      if (!lic) throw new Error('Kode tidak ditemukan.');
+      lic.status = 'in-active';
+      const u = db.users.find((x) => x.license_code === lic.code || (lic.used_by_email && x.email === lic.used_by_email));
+      if (u) u.status = 'in-active';
+      saveDemoDb(db);
+      return { deactivated: true, code: lic.code, status: 'in-active', user_updated: !!u };
+    }
     if (action === 'adminDeleteUnusedLicenses') {
       const before = db.licenses.length;
       db.licenses = db.licenses.filter((x) => x.status !== 'unused');
@@ -2962,22 +2971,60 @@ function switchAdminTab(tabName) {
   }
 }
 
-function renderLicenseTable(licenses = []) {
+let lastAdminUsers = [];
+
+function renderLicenseTable(licenses = [], users = lastAdminUsers) {
+  if (Array.isArray(users) && users.length) lastAdminUsers = users;
+  const userList = Array.isArray(users) ? users : [];
   $('tbody-admin-licenses').innerHTML = licenses.length
-    ? licenses.slice(0, 100).map((l) => `
-      <tr>
-        <td data-label="Kode"><code>${escapeHtml(l.code)}</code></td>
-        <td data-label="Paket">${escapeHtml(String(l.tier || '').toUpperCase())}</td>
-        <td data-label="Status"><span class="badge ${l.status === 'unused' ? 'badge-ok' : 'badge-neutral'}">${escapeHtml(l.status)}</span></td>
-        <td data-label="Dipakai Oleh">${escapeHtml(l.used_by_email || '-')}</td>
-        <td data-label="Aksi" class="td-actions">
-          <div class="action-btns">
-            <button type="button" class="btn btn-sm btn-outline" onclick="copyCheckinUrl('${escapeHtml(l.code)}')">Salin</button>
-            ${l.status === 'unused' ? `<button type="button" class="btn btn-sm btn-danger" onclick="adminDeleteCode('${escapeHtml(l.code)}')">Hapus</button>` : ''}
-          </div>
-        </td>
-      </tr>`).join('')
-    : '<tr class="empty-row"><td colspan="5" class="muted">Belum ada kode lisensi.</td></tr>';
+    ? licenses.slice(0, 100).map((l) => {
+        const st = String(l.status || 'unused').toLowerCase();
+        const stBadge = st === 'unused' ? 'badge-ok' : (st === 'in-active' ? 'badge-bad' : 'badge-neutral');
+        const usedAtText = l.used_at ? formatDateTimeId(l.used_at) : '-';
+        const matchedUser = userList.find((u) =>
+          String(u.license_code || '').toUpperCase() === String(l.code || '').toUpperCase() ||
+          (l.used_by_email && String(u.email || '').toLowerCase() === String(l.used_by_email || '').toLowerCase())
+        );
+
+        let expMs = 0;
+        if (matchedUser?.expires_at) {
+          expMs = new Date(matchedUser.expires_at).getTime();
+        } else if (l.used_at && Number(l.duration_days || 0) > 0) {
+          expMs = new Date(l.used_at).getTime() + Number(l.duration_days) * 86400000;
+        }
+
+        let tempoHtml = `<span class="muted">${Number(l.duration_days || 0) > 0 ? `${Number(l.duration_days)} hari (belum aktif)` : '-'}</span>`;
+        let isOverTime = false;
+        if (st !== 'unused' && expMs > 0 && !Number.isNaN(expMs)) {
+          const diffDays = Math.ceil((expMs - Date.now()) / 86400000);
+          const expDateStr = formatDateId(new Date(expMs).toISOString());
+          if (diffDays <= 0) {
+            isOverTime = true;
+            const overLabel = diffDays === 0 ? 'Jatuh Tempo Hari Ini' : `Over Time (${Math.abs(diffDays)} hari)`;
+            tempoHtml = `<span class="badge badge-bad">${overLabel}</span><br><small class="muted">s/d ${escapeHtml(expDateStr)}</small>`;
+          } else {
+            tempoHtml = `<span class="badge badge-ok">${diffDays} hari lagi</span><br><small class="muted">s/d ${escapeHtml(expDateStr)}</small>`;
+          }
+        }
+
+        return `
+          <tr>
+            <td data-label="Kode"><code>${escapeHtml(l.code)}</code></td>
+            <td data-label="Paket">${escapeHtml(String(l.tier || '').toUpperCase())}</td>
+            <td data-label="Status"><span class="badge ${stBadge}">${escapeHtml(st)}</span></td>
+            <td data-label="Dipakai Oleh">${escapeHtml(l.used_by_email || '-')}</td>
+            <td data-label="Aktif / Dipakai">${escapeHtml(usedAtText)}</td>
+            <td data-label="Sisa Tempo">${tempoHtml}</td>
+            <td data-label="Aksi" class="td-actions">
+              <div class="action-btns">
+                <button type="button" class="btn btn-sm btn-outline" onclick="copyCheckinUrl('${escapeHtml(l.code)}')">Salin</button>
+                ${st === 'used' ? `<button type="button" class="btn btn-sm ${isOverTime ? 'btn-danger' : 'btn-outline'}" onclick="adminDeactivateCode('${escapeHtml(l.code)}', ${isOverTime})">Unuse (In-Active)</button>` : ''}
+                ${st === 'unused' ? `<button type="button" class="btn btn-sm btn-danger" onclick="adminDeleteCode('${escapeHtml(l.code)}')">Hapus</button>` : ''}
+              </div>
+            </td>
+          </tr>`;
+      }).join('')
+    : '<tr class="empty-row"><td colspan="7" class="muted">Belum ada kode lisensi.</td></tr>';
 }
 
 function renderAdminTables({ users = [], licenses = [], payments = [], pricing = null }) {
@@ -3006,7 +3053,7 @@ function renderAdminTables({ users = [], licenses = [], payments = [], pricing =
       }).join('')
     : '<tr class="empty-row"><td colspan="8" class="muted">Belum ada user terdaftar.</td></tr>';
 
-  renderLicenseTable(licenses);
+  renderLicenseTable(licenses, users);
 
   const p = { ...getDefaultPricing(), ...(pricing || {}) };
   if ($('adm-promo-banner')) $('adm-promo-banner').value = p.promo_banner || '';
@@ -3086,6 +3133,26 @@ window.adminDeleteCode = (code) => {
       try {
         await apiCall('adminDeleteLicense', { admin_key: adminKeySession, code });
         showToast(`Kode ${code} dihapus.`);
+        await loadAdminDashboard();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    },
+  });
+};
+
+window.adminDeactivateCode = (code, isOverTime = false) => {
+  openConfirmModal({
+    title: 'Unuse / In-Active Kode & User',
+    message: isOverTime
+      ? `Kode "${code}" sudah melewati masa tempo (Over Time). Nonaktifkan kode dan set status user pemakainya menjadi in-active?`
+      : `Nonaktifkan kode "${code}" dan ubah status user pemakainya menjadi in-active?`,
+    confirmText: 'Ya, In-Active',
+    isDanger: true,
+    onConfirm: async () => {
+      try {
+        await apiCall('adminDeactivateLicense', { admin_key: adminKeySession, code });
+        showToast(`Kode ${code} & user terkait diset in-active.`);
         await loadAdminDashboard();
       } catch (err) {
         showToast(err.message, true);
