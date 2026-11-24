@@ -114,6 +114,7 @@ const state = {
     rundowns: [],
     assets: [],
     activity_logs: [],
+    wishes: [],
   },
   modalContext: null,
 };
@@ -630,7 +631,17 @@ function demoApiCall(action, payload) {
       rundowns: db.rundowns.filter((r) => r.user_id === userId),
       assets: (db.assets || []).filter((r) => r.user_id === userId),
       activity_logs: (db.activity_logs || []).filter((r) => r.user_id === userId).slice(-30).reverse(),
+      wishes: (db.wishes || []).filter((w) => w.user_id === userId).slice(-50).reverse(),
     };
+  }
+
+  if (action === 'deleteWish') {
+    db.wishes = db.wishes || [];
+    const idx = db.wishes.findIndex((w) => w.id === payload.wish_id && w.user_id === userId);
+    if (idx === -1) throw new Error('Ucapan tidak ditemukan.');
+    db.wishes.splice(idx, 1);
+    saveDemoDb(db);
+    return { deleted: true };
   }
 
   if (action === 'uploadReceipt') {
@@ -1084,6 +1095,7 @@ function applyTierUi() {
   $('btn-show-qr')?.classList.toggle('hidden', !caps.qrGeneral);
   $('btn-wa-queue')?.classList.toggle('hidden', !caps.waSend);
   $('dash-payment-reminder-card')?.classList.toggle('hidden', !caps.vendorReminder);
+  $('dash-wishes-card')?.classList.toggle('hidden', !caps.wishes);
   $('btn-export-pdf')?.classList.toggle('hidden', !caps.backupPdf);
   $('btn-export-excel')?.classList.toggle('hidden', !caps.backupExcel);
   document.querySelector('.activity-card')?.classList.toggle('hidden', !caps.auditLog);
@@ -1203,6 +1215,7 @@ async function loadAllData() {
       rundowns: res.rundowns || [],
       assets: res.assets || [],
       activity_logs: res.activity_logs || [],
+      wishes: res.wishes || [],
     };
     renderAll();
   } catch (err) {
@@ -1705,6 +1718,26 @@ function renderDashboard() {
       : '<li class="muted">Semua tagihan vendor & anggaran sudah lunas.</li>';
   }
 
+  const wishesListEl = $('dash-wishes-list');
+  const wishesCountEl = $('dash-wishes-count');
+  if (wishesListEl && getTierCaps().wishes) {
+    const wishes = state.data.wishes || [];
+    if (wishesCountEl) wishesCountEl.textContent = `${wishes.length} Ucapan`;
+    wishesListEl.innerHTML = wishes.length
+      ? wishes.map((w) => `
+          <li style="align-items:flex-start;gap:12px">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <strong>${escapeHtml(w.guest_name || 'Tamu')}</strong>
+                <small class="muted">${escapeHtml(formatDateTimeId(w.created_at))}</small>
+              </div>
+              <div style="margin-top:4px;white-space:pre-wrap;word-break:break-word">${escapeHtml(w.message || '')}</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteGuestWish('${escapeHtml(w.id)}')">Hapus</button>
+          </li>`).join('')
+      : '<li class="muted">Belum ada ucapan atau doa restu dari tamu.</li>';
+  }
+
   const sortedChecklist = [...checklists].sort((a, b) => {
     const aDone = a.done === 'Selesai' ? 1 : 0;
     const bDone = b.done === 'Selesai' ? 1 : 0;
@@ -2131,6 +2164,27 @@ window.deleteRecord = (module, id) => {
   });
 };
 
+window.deleteGuestWish = (wishId) => {
+  openConfirmModal({
+    title: 'Hapus Ucapan Tamu',
+    message: 'Ucapan & doa restu ini akan dihapus permanen dari daftar dan halaman undangan. Lanjutkan?',
+    confirmText: 'Ya, Hapus',
+    isDanger: true,
+    onConfirm: async () => {
+      try {
+        const target = (state.data.wishes || []).find((w) => w.id === wishId);
+        await apiCall('deleteWish', { wish_id: wishId });
+        state.data.wishes = (state.data.wishes || []).filter((w) => w.id !== wishId);
+        pushLocalLog('DELETE', 'wishes', target?.guest_name || wishId);
+        renderAll();
+        showToast('Ucapan tamu dihapus.');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    },
+  });
+};
+
 window.syncCameraFile = (camInput) => {
   const file = camInput.files?.[0];
   if (!file) return;
@@ -2550,7 +2604,7 @@ document.addEventListener('DOMContentLoaded', () => {
               throw err;
             }
           }
-          state.data = { budgets: [], guests: [], vendors: [], checklists: [], rundowns: [], assets: [] };
+          state.data = { budgets: [], guests: [], vendors: [], checklists: [], rundowns: [], assets: [], activity_logs: [], wishes: [] };
           renderAll();
           showToast('Semua data akun Anda berhasil direset.');
         } catch (err) {
