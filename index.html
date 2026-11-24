@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
   <link rel="icon" type="image/png" href="assets/img/logo-light.png" />
-  <link rel="stylesheet" href="styles.css?v=61" />
+  <link rel="stylesheet" href="styles.css?v=62" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -317,7 +317,10 @@
                   <div class="field" style="flex:1"><label>Harga Normal (Rp)</label><input id="adm-price-sed" type="text" inputmode="numeric" /></div>
                   <div class="field" style="flex:1"><label>Harga Promo (0 = Normal)</label><input id="adm-promo-sed" type="text" inputmode="numeric" /></div>
                 </div>
-                <div class="field"><label>Label Diskon (Opsional)</label><input id="adm-label-sed" type="text" placeholder="Contoh: HEMAT 20%" /></div>
+                <div class="btn-row">
+                  <div class="field" style="flex:1"><label>Label Diskon (Opsional)</label><input id="adm-label-sed" type="text" placeholder="Contoh: HEMAT 20%" /></div>
+                  <div class="field" style="flex:1"><label>Limit Tamu (0 = Unlimited)</label><input id="adm-guests-sed" type="number" min="0" placeholder="100" /></div>
+                </div>
               </div>
 
               <div class="installment-box form-stack">
@@ -326,7 +329,10 @@
                   <div class="field" style="flex:1"><label>Harga Normal (Rp)</label><input id="adm-price-med" type="text" inputmode="numeric" /></div>
                   <div class="field" style="flex:1"><label>Harga Promo (0 = Normal)</label><input id="adm-promo-med" type="text" inputmode="numeric" /></div>
                 </div>
-                <div class="field"><label>Label Diskon (Opsional)</label><input id="adm-label-med" type="text" placeholder="Contoh: BEST SELLER" /></div>
+                <div class="btn-row">
+                  <div class="field" style="flex:1"><label>Label Diskon (Opsional)</label><input id="adm-label-med" type="text" placeholder="Contoh: BEST SELLER" /></div>
+                  <div class="field" style="flex:1"><label>Limit Tamu (0 = Unlimited)</label><input id="adm-guests-med" type="number" min="0" placeholder="200" /></div>
+                </div>
               </div>
 
               <div class="installment-box form-stack">
@@ -335,7 +341,10 @@
                   <div class="field" style="flex:1"><label>Harga Normal (Rp)</label><input id="adm-price-rch" type="text" inputmode="numeric" /></div>
                   <div class="field" style="flex:1"><label>Harga Promo (0 = Normal)</label><input id="adm-promo-rch" type="text" inputmode="numeric" /></div>
                 </div>
-                <div class="field"><label>Label Diskon (Opsional)</label><input id="adm-label-rch" type="text" placeholder="Contoh: DISKON 25%" /></div>
+                <div class="btn-row">
+                  <div class="field" style="flex:1"><label>Label Diskon (Opsional)</label><input id="adm-label-rch" type="text" placeholder="Contoh: DISKON 25%" /></div>
+                  <div class="field" style="flex:1"><label>Limit Tamu (0 = Unlimited)</label><input id="adm-guests-rch" type="number" min="0" placeholder="500" /></div>
+                </div>
               </div>
 
               <div class="installment-box form-stack">
@@ -344,7 +353,10 @@
                   <div class="field" style="flex:1"><label>Harga Normal (Rp)</label><input id="adm-price-kng" type="text" inputmode="numeric" /></div>
                   <div class="field" style="flex:1"><label>Harga Promo (0 = Normal)</label><input id="adm-promo-kng" type="text" inputmode="numeric" /></div>
                 </div>
-                <div class="field"><label>Label Diskon (Opsional)</label><input id="adm-label-kng" type="text" placeholder="Contoh: EKSKLUSIF AI" /></div>
+                <div class="btn-row">
+                  <div class="field" style="flex:1"><label>Label Diskon (Opsional)</label><input id="adm-label-kng" type="text" placeholder="Contoh: EKSKLUSIF AI" /></div>
+                  <div class="field" style="flex:1"><label>Limit Tamu (0 = Unlimited)</label><input id="adm-guests-kng" type="number" min="0" placeholder="0" /></div>
+                </div>
               </div>
 
               <button type="submit" class="btn btn-primary">Simpan Harga &amp; Promo</button>
@@ -948,7 +960,7 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="ai-planner.js?v=61"></script>
-  <script src="app.js?v=61"></script>
+  <script src="ai-planner.js?v=62"></script>
+  <script src="app.js?v=62"></script>
 </body>
 </html>

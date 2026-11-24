@@ -736,10 +736,10 @@ function updateModeBanner() {
 function getDefaultPricing() {
   return {
     promo_banner: '',
-    sederhana: { price: 79000, promo_price: 0, promo_label: '' },
-    medium: { price: 149000, promo_price: 0, promo_label: '' },
-    rich: { price: 249000, promo_price: 0, promo_label: '' },
-    konglo: { price: 349000, promo_price: 0, promo_label: '' },
+    sederhana: { price: 79000, promo_price: 0, promo_label: '', max_guests: 100 },
+    medium: { price: 149000, promo_price: 0, promo_label: '', max_guests: 200 },
+    rich: { price: 249000, promo_price: 0, promo_label: '', max_guests: 500 },
+    konglo: { price: 349000, promo_price: 0, promo_label: '', max_guests: 0 },
   };
 }
 
@@ -832,9 +832,15 @@ function renderPricingShowcase(pricingData) {
   ];
 
   gridEl.innerHTML = tiers.map((t) => {
-    const cfg = p[t.key] || { price: 0, promo_price: 0, promo_label: '' };
+    const cfg = p[t.key] || { price: 0, promo_price: 0, promo_label: '', max_guests: 0 };
     const normalPrice = Number(cfg.price || 0);
     const promoPrice = Number(cfg.promo_price || 0);
+    const maxGuests = Number(cfg.max_guests ?? getDefaultPricing()[t.key]?.max_guests ?? 0);
+    const guestLimitText = maxGuests > 0 ? `Maks. ${maxGuests.toLocaleString('id-ID')} Tamu` : 'Kapasitas Tamu Unlimited';
+    const tierFeatures = [...t.features];
+    const guestIdx = tierFeatures.findIndex((f) => /daftar tamu/i.test(f));
+    if (guestIdx !== -1) tierFeatures[guestIdx] = `Daftar Tamu & RSVP (${guestLimitText})`;
+    else tierFeatures.splice(1, 0, guestLimitText);
     const hasPromo = promoPrice > 0 && promoPrice < normalPrice;
     const discountPct = hasPromo ? Math.round(((normalPrice - promoPrice) / normalPrice) * 100) : 0;
     const effectivePrice = hasPromo ? promoPrice : normalPrice;
@@ -874,18 +880,35 @@ function renderPricingShowcase(pricingData) {
           </div>
         </div>
         ${priceHtml}
-        <ul class="pricing-features">${t.features.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
+        <ul class="pricing-features">${tierFeatures.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
         <a class="btn ${t.featured ? 'btn-primary' : 'btn-outline'} btn-full pricing-cta" href="${waUrl}" target="_blank" rel="noopener">Beli</a>
       </div>
     `;
   }).join('');
 }
 
+const PRICING_CACHE_KEY = 'nikahplan_public_pricing_v1';
+
 async function loadPublicPricing() {
+  try {
+    const raw = sessionStorage.getItem(PRICING_CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.pricing && Date.now() - Number(parsed.ts || 0) < 120000) {
+        renderPricingShowcase(parsed.pricing);
+        return;
+      }
+    }
+  } catch {}
   renderPricingShowcase(getDefaultPricing());
   try {
     const res = await apiCall('publicPricing', {});
-    if (res && res.pricing) renderPricingShowcase(res.pricing);
+    if (res && res.pricing) {
+      renderPricingShowcase(res.pricing);
+      try {
+        sessionStorage.setItem(PRICING_CACHE_KEY, JSON.stringify({ ts: Date.now(), pricing: res.pricing }));
+      } catch {}
+    }
   } catch (e) {
     // Keep default pricing silently if offline or backend not yet updated
   }
@@ -1080,6 +1103,7 @@ async function loadAllData() {
       state.user.tier = res.plan.tier;
       state.user.status = res.plan.status;
       state.user.expires_at = res.plan.expires_at;
+      state.user.max_guests = Number(res.plan.max_guests || 0);
       localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(state.user));
       applyTierUi();
     }
@@ -1807,6 +1831,15 @@ function renderAssets() {
 
 // --- CRUD Modal & Actions ---
 function openModal(module, existingItem = null) {
+  if (!existingItem && module === 'guests') {
+    const fallbackLimits = { sederhana: 100, medium: 200, rich: 500, konglo: 0 };
+    const tier = getTierCaps().tier;
+    const limit = Number(state.user?.max_guests ?? fallbackLimits[tier] ?? 0);
+    if (limit > 0 && (state.data.guests || []).length >= limit) {
+      showToast(`Batas maksimal tamu untuk paket ${tier.toUpperCase()} (${limit} tamu) telah tercapai. Upgrade paket untuk menambah lebih banyak tamu.`, true);
+      return;
+    }
+  }
   const schema = MODULE_SCHEMAS[module];
   state.modalContext = { type: 'crud', module, id: existingItem?.id || null };
   $('modal-title').textContent = (existingItem ? 'Edit ' : 'Tambah ') + schema.title;
@@ -2788,15 +2821,19 @@ function renderAdminTables({ users = [], licenses = [], payments = [], pricing =
   if ($('adm-price-sed')) $('adm-price-sed').value = fmtOpt(p.sederhana?.price);
   if ($('adm-promo-sed')) $('adm-promo-sed').value = fmtOpt(p.sederhana?.promo_price);
   if ($('adm-label-sed')) $('adm-label-sed').value = p.sederhana?.promo_label || '';
+  if ($('adm-guests-sed')) $('adm-guests-sed').value = p.sederhana?.max_guests ?? 100;
   if ($('adm-price-med')) $('adm-price-med').value = fmtOpt(p.medium?.price);
   if ($('adm-promo-med')) $('adm-promo-med').value = fmtOpt(p.medium?.promo_price);
   if ($('adm-label-med')) $('adm-label-med').value = p.medium?.promo_label || '';
+  if ($('adm-guests-med')) $('adm-guests-med').value = p.medium?.max_guests ?? 200;
   if ($('adm-price-rch')) $('adm-price-rch').value = fmtOpt(p.rich?.price);
   if ($('adm-promo-rch')) $('adm-promo-rch').value = fmtOpt(p.rich?.promo_price);
   if ($('adm-label-rch')) $('adm-label-rch').value = p.rich?.promo_label || '';
+  if ($('adm-guests-rch')) $('adm-guests-rch').value = p.rich?.max_guests ?? 500;
   if ($('adm-price-kng')) $('adm-price-kng').value = fmtOpt(p.konglo?.price);
   if ($('adm-promo-kng')) $('adm-promo-kng').value = fmtOpt(p.konglo?.promo_price);
   if ($('adm-label-kng')) $('adm-label-kng').value = p.konglo?.promo_label || '';
+  if ($('adm-guests-kng')) $('adm-guests-kng').value = p.konglo?.max_guests ?? 0;
 
   $('tbody-admin-payments').innerHTML = payments.length
     ? payments.slice(0, 50).map((p) => `
@@ -2950,25 +2987,32 @@ document.addEventListener('DOMContentLoaded', () => {
             price: parseCurrency($('adm-price-sed').value),
             promo_price: parseCurrency($('adm-promo-sed').value),
             promo_label: $('adm-label-sed').value.trim(),
+            max_guests: Math.max(0, Number($('adm-guests-sed')?.value || 0)),
           },
           medium: {
             price: parseCurrency($('adm-price-med').value),
             promo_price: parseCurrency($('adm-promo-med').value),
             promo_label: $('adm-label-med').value.trim(),
+            max_guests: Math.max(0, Number($('adm-guests-med')?.value || 0)),
           },
           rich: {
             price: parseCurrency($('adm-price-rch').value),
             promo_price: parseCurrency($('adm-promo-rch').value),
             promo_label: $('adm-label-rch').value.trim(),
+            max_guests: Math.max(0, Number($('adm-guests-rch')?.value || 0)),
           },
           konglo: {
             price: parseCurrency($('adm-price-kng').value),
             promo_price: parseCurrency($('adm-promo-kng').value),
             promo_label: $('adm-label-kng').value.trim(),
+            max_guests: Math.max(0, Number($('adm-guests-kng')?.value || 0)),
           },
         };
         const res = await apiCall('adminSavePricing', { admin_key: adminKeySession, pricing });
-        if (res?.pricing) renderPricingShowcase(res.pricing);
+        if (res?.pricing) {
+          renderPricingShowcase(res.pricing);
+          try { sessionStorage.removeItem(PRICING_CACHE_KEY); } catch {}
+        }
         showToast('Harga & promo berhasil disimpan!');
       } catch (err) {
         showToast(err.message, true);
