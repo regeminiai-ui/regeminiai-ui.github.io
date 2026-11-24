@@ -2071,3 +2071,65 @@ input[type="checkbox"] {
     bottom: 16px;
   }
 }
+
+/* Status Toggle Switch (Admin Licenses) */
+.status-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.status-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.status-switch-track {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  border: 1.5px solid #cbd5e1;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.status-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.status-switch input:checked + .status-switch-track {
+  background: #16a34a;
+  border-color: #15803d;
+}
+
+.status-switch input:checked + .status-switch-track::after {
+  transform: translateX(16px);
+}
+
+.status-switch-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.status-switch-label.is-active {
+  color: #15803d;
+}
+
+.status-switch-label.is-inactive {
+  color: #b91c1c;
+}

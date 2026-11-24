@@ -534,11 +534,14 @@ function demoApiCall(action, payload) {
     if (action === 'adminDeactivateLicense') {
       const lic = db.licenses.find((x) => x.code === payload.code);
       if (!lic) throw new Error('Kode tidak ditemukan.');
-      lic.status = 'in-active';
+      const reqSt = String(payload.target_status || 'in-active').toLowerCase();
+      const nextLicSt = reqSt === 'used' || reqSt === 'active' ? 'used' : 'in-active';
+      const nextUserSt = nextLicSt === 'used' ? 'active' : 'in-active';
+      lic.status = nextLicSt;
       const u = db.users.find((x) => x.license_code === lic.code || (lic.used_by_email && x.email === lic.used_by_email));
-      if (u) u.status = 'in-active';
+      if (u) u.status = nextUserSt;
       saveDemoDb(db);
-      return { deactivated: true, code: lic.code, status: 'in-active', user_updated: !!u };
+      return { code: lic.code, status: nextLicSt, user_status: nextUserSt, user_updated: !!u };
     }
     if (action === 'adminDeleteUnusedLicenses') {
       const before = db.licenses.length;
@@ -3007,18 +3010,26 @@ function renderLicenseTable(licenses = [], users = lastAdminUsers) {
           }
         }
 
+        const isActive = st === 'used';
+        const statusCellHtml = st === 'unused'
+          ? `<span class="badge badge-ok">unused</span>`
+          : `<label class="status-switch" title="${isActive ? 'Klik untuk nonaktifkan (In-Active)' : 'Klik untuk aktifkan kembali (Active)'}">
+              <input type="checkbox" ${isActive ? 'checked' : ''} onclick="return adminToggleLicense(event, '${escapeHtml(l.code)}', ${isActive}, ${isOverTime})" />
+              <span class="status-switch-track"></span>
+              <span class="status-switch-label ${isActive ? 'is-active' : 'is-inactive'}">${isActive ? 'Active' : 'In-Active'}</span>
+            </label>`;
+
         return `
           <tr>
             <td data-label="Kode"><code>${escapeHtml(l.code)}</code></td>
             <td data-label="Paket">${escapeHtml(String(l.tier || '').toUpperCase())}</td>
-            <td data-label="Status"><span class="badge ${stBadge}">${escapeHtml(st)}</span></td>
+            <td data-label="Status">${statusCellHtml}</td>
             <td data-label="Dipakai Oleh">${escapeHtml(l.used_by_email || '-')}</td>
             <td data-label="Aktif / Dipakai">${escapeHtml(usedAtText)}</td>
             <td data-label="Sisa Tempo">${tempoHtml}</td>
             <td data-label="Aksi" class="td-actions">
               <div class="action-btns">
                 <button type="button" class="btn btn-sm btn-outline" onclick="copyCheckinUrl('${escapeHtml(l.code)}')">Salin</button>
-                ${st === 'used' ? `<button type="button" class="btn btn-sm ${isOverTime ? 'btn-danger' : 'btn-outline'}" onclick="adminDeactivateCode('${escapeHtml(l.code)}', ${isOverTime})">Unuse (In-Active)</button>` : ''}
                 ${st === 'unused' ? `<button type="button" class="btn btn-sm btn-danger" onclick="adminDeleteCode('${escapeHtml(l.code)}')">Hapus</button>` : ''}
               </div>
             </td>
@@ -3141,24 +3152,29 @@ window.adminDeleteCode = (code) => {
   });
 };
 
-window.adminDeactivateCode = (code, isOverTime = false) => {
+window.adminToggleLicense = (e, code, currentlyActive, isOverTime = false) => {
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+  const nextStatus = currentlyActive ? 'in-active' : 'used';
   openConfirmModal({
-    title: 'Unuse / In-Active Kode & User',
-    message: isOverTime
-      ? `Kode "${code}" sudah melewati masa tempo (Over Time). Nonaktifkan kode dan set status user pemakainya menjadi in-active?`
-      : `Nonaktifkan kode "${code}" dan ubah status user pemakainya menjadi in-active?`,
-    confirmText: 'Ya, In-Active',
-    isDanger: true,
+    title: currentlyActive ? 'Nonaktifkan Kode & User (In-Active)' : 'Aktifkan Kembali Kode & User',
+    message: currentlyActive
+      ? (isOverTime
+        ? `Kode "${code}" sudah melewati masa tempo (Over Time). Nonaktifkan kode dan ubah status user pemakainya menjadi In-Active?`
+        : `Nonaktifkan kode "${code}" dan ubah status user pemakainya menjadi In-Active?`)
+      : `Aktifkan kembali kode "${code}" dan ubah status user pemakainya menjadi Active?`,
+    confirmText: currentlyActive ? 'Ya, In-Active' : 'Ya, Aktifkan',
+    isDanger: currentlyActive,
     onConfirm: async () => {
       try {
-        await apiCall('adminDeactivateLicense', { admin_key: adminKeySession, code });
-        showToast(`Kode ${code} & user terkait diset in-active.`);
+        await apiCall('adminDeactivateLicense', { admin_key: adminKeySession, code, target_status: nextStatus });
+        showToast(currentlyActive ? `Kode ${code} & user diset In-Active.` : `Kode ${code} & user diaktifkan kembali.`);
         await loadAdminDashboard();
       } catch (err) {
         showToast(err.message, true);
       }
     },
   });
+  return false;
 };
 
 document.addEventListener('DOMContentLoaded', () => {
