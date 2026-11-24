@@ -855,8 +855,24 @@ h1, h2, h3, .brand-title {
 }
 
 .tpl-item.active {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(184, 93, 105, 0.25);
+  background: #dcfce7;
+  border-color: #16a34a;
+  color: #14532d;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.28);
+}
+
+.tpl-item.active .tpl-cat {
+  color: #166534;
+}
+
+[data-theme="dark"] .tpl-item.active {
+  background: #143321;
+  border-color: #4ade80;
+  color: #dcfce7;
+}
+
+[data-theme="dark"] .tpl-item.active .tpl-cat {
+  color: #86efac;
 }
 
 .tpl-swatch {
