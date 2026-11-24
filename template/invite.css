@@ -1,0 +1,244 @@
+/* Digital Wedding Invitation Template Engine Styles (Pure SVG + Editorial Typography) */
+#guest-scanner-view[data-invite-themed="true"] {
+  background-color: var(--inv-bg);
+  background-image: radial-gradient(circle at 20% 15%, var(--inv-soft) 0%, transparent 55%),
+    radial-gradient(circle at 85% 85%, var(--inv-soft) 0%, transparent 55%);
+  color: var(--inv-text);
+  padding: 28px 16px;
+}
+
+#guest-scanner-view[data-invite-themed="true"] .invite-card {
+  position: relative;
+  overflow: hidden;
+  max-width: 540px;
+  width: 100%;
+  background: var(--inv-card);
+  border: 1.5px solid var(--inv-border);
+  border-radius: 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.14);
+  padding: 44px 28px 32px;
+  color: var(--inv-text);
+  text-align: center;
+}
+
+.invite-inner-frame {
+  position: relative;
+  z-index: 2;
+}
+
+.invite-corner-svg {
+  position: absolute;
+  width: 175px;
+  height: 175px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.9;
+}
+
+.invite-corner-tr {
+  top: -8px;
+  right: -8px;
+}
+
+.invite-corner-bl {
+  bottom: -8px;
+  left: -8px;
+  transform: rotate(180deg);
+}
+
+.invite-crest-svg {
+  width: 132px;
+  height: 92px;
+  margin: 0 auto 6px;
+  display: block;
+}
+
+#guest-scanner-view[data-invite-themed="true"] .muted {
+  color: var(--inv-muted);
+}
+
+#guest-scanner-view[data-invite-themed="true"] .invite-eyebrow {
+  color: var(--inv-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+#guest-scanner-view[data-invite-font="script"] .invite-couple {
+  font-family: 'Great Vibes', 'Caveat', cursive;
+  font-size: 2.85rem;
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+#guest-scanner-view[data-invite-font="serif"] .invite-couple {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 2.35rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+#guest-scanner-view[data-invite-font="classic"] .invite-couple {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 2.05rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#guest-scanner-view[data-invite-font="sans"] .invite-couple {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Editorial Date Lockup (like Image 3: SAT | (31) | JUL 2028) */
+.invite-date-lockup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 12px auto 6px;
+  padding: 6px 14px;
+}
+
+.invite-date-side {
+  border-top: 1px solid var(--inv-border);
+  border-bottom: 1px solid var(--inv-border);
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--inv-text);
+}
+
+.invite-date-day {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1.5px solid var(--inv-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--inv-accent);
+}
+
+#guest-scanner-view[data-invite-themed="true"] .invite-countdown {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--inv-soft);
+  border: 1px solid var(--inv-border);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--inv-accent);
+}
+
+#guest-scanner-view[data-invite-themed="true"] .invite-guest-box {
+  margin: 18px 0 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--inv-soft);
+  border: 1.5px dashed var(--inv-border);
+  color: var(--inv-text);
+}
+
+#guest-scanner-view[data-invite-themed="true"] .invite-guest-box h3 {
+  color: var(--inv-text);
+  font-size: 1.25rem;
+  margin: 4px 0;
+}
+
+#guest-scanner-view[data-invite-themed="true"] .invite-to {
+  color: var(--inv-muted);
+}
+
+#guest-scanner-view[data-invite-themed="true"] .invite-rundown {
+  text-align: left;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--inv-soft);
+  border: 1px solid var(--inv-border);
+  color: var(--inv-text);
+}
+
+#guest-scanner-view[data-invite-themed="true"] .invite-rundown-list li {
+  border-bottom-color: var(--inv-border);
+}
+
+.invite-maps-wrap {
+  margin: 0 0 16px;
+}
+
+.btn-maps-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--inv-accent, var(--primary));
+  background: transparent;
+  color: var(--inv-accent, var(--primary));
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+
+.btn-maps-link:hover {
+  transform: translateY(-1px);
+  background: var(--inv-soft, var(--surface-alt));
+}
+
+#guest-scanner-view[data-invite-themed="true"] .invite-checkin-box {
+  border-top: 1.5px dashed var(--inv-border);
+  padding-top: 16px;
+}
+
+#guest-scanner-view[data-invite-themed="true"] .btn-primary {
+  background: var(--inv-accent);
+  border-color: var(--inv-accent);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+}
+
+#guest-scanner-view[data-invite-themed="true"] .btn-outline {
+  background: transparent;
+  border-color: var(--inv-border);
+  color: var(--inv-text);
+  box-shadow: none;
+}
+
+#guest-scanner-view[data-invite-themed="true"] .checkin-success {
+  background: var(--inv-soft);
+  border-color: var(--inv-accent);
+  color: var(--inv-text);
+}
+
+/* Template Picker Swatch SVG preview */
+.tpl-swatch-svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 520px) {
+  .invite-corner-svg {
+    width: 130px;
+    height: 130px;
+  }
+  #guest-scanner-view[data-invite-themed="true"] .invite-card {
+    padding: 34px 18px 26px;
+  }
+}

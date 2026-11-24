@@ -598,6 +598,8 @@ function demoApiCall(action, payload) {
     currentUser.partner_email = (payload.partner_email || '').trim().toLowerCase();
     currentUser.drive_folder_id = (payload.drive_folder_id || '').trim();
     currentUser.wedding_date = payload.wedding_date || '';
+    if (payload.invite_template) currentUser.invite_template = payload.invite_template;
+    if (payload.maps_url !== undefined) currentUser.maps_url = String(payload.maps_url || '').trim();
     saveDemoDb(db);
     const { password, ...safeUser } = currentUser;
     return { user: safeUser };
@@ -752,7 +754,7 @@ function renderPricingShowcase(pricingData) {
   const bannerEl = $('pricing-promo-banner');
   if (bannerEl) {
     if (p.promo_banner && p.promo_banner.trim()) {
-      bannerEl.innerHTML = `<span class="promo-banner-icon">&#10024;</span> <span>${escapeHtml(p.promo_banner.trim())}</span>`;
+      bannerEl.innerHTML = `<svg class="svg-icon" viewBox="0 0 24 24" style="flex-shrink:0"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg> <span>${escapeHtml(p.promo_banner.trim())}</span>`;
       bannerEl.classList.remove('hidden');
     } else {
       bannerEl.innerHTML = '';
@@ -1083,10 +1085,11 @@ function renderTemplatePicker(tier, locked = false) {
 
   grid.innerHTML = list.map((tpl) => {
     const isActive = tpl.id === activeId;
+    const svgIcon = window.InvitationRenderer ? window.InvitationRenderer.getMiniBadgeSvg(tpl) : '';
     return `
       <button type="button" class="tpl-item${isActive ? ' active' : ''}" ${locked ? 'disabled' : ''} onclick="selectInviteTemplate('${tpl.id}')">
         <div class="tpl-swatch" style="background:${tpl.bg};color:${tpl.text};border-color:${tpl.border};">
-          <span>${escapeHtml(tpl.ornament)} ${escapeHtml(tpl.code)}</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;">${svgIcon} ${escapeHtml(tpl.code)}</span>
           <span style="color:${tpl.accent};">${isActive ? 'Aktif' : 'Pilih'}</span>
         </div>
         <div class="tpl-meta">
@@ -1108,6 +1111,7 @@ window.selectInviteTemplate = async (tplId) => {
       partner_email: state.user.partner_email || '',
       drive_folder_id: state.user.drive_folder_id || '',
       wedding_date: normalizeDateStr(state.user.wedding_date),
+      maps_url: state.user.maps_url || '',
       invite_template: tpl.id,
     });
     if (res?.user) saveSession(state.token, { ...state.user, ...res.user });
@@ -1127,6 +1131,7 @@ function renderUserHeader() {
   $('set-partner-email').value = u.partner_email || '';
   $('set-drive-folder').value = u.drive_folder_id || '';
   $('set-date').value = dateStr;
+  if ($('set-maps-url')) $('set-maps-url').value = u.maps_url || '';
   $('set-api-url').value = state.apiUrl || '';
 
   const cd = $('wedding-countdown');
@@ -2498,6 +2503,7 @@ document.addEventListener('DOMContentLoaded', () => {
             partner_email: $('set-partner-email').value,
             drive_folder_id: $('set-drive-folder').value,
             wedding_date: $('set-date').value,
+            maps_url: $('set-maps-url')?.value || '',
           });
           saveSession(state.token, res.user);
           renderUserHeader();
@@ -3178,22 +3184,31 @@ async function initGuestScannerView(userId, guestId) {
     const info = await apiCall('publicEventInfo', { user_id: userId, guest_id: guestId });
     if (window.InvitationTemplates) {
       const tpl = window.InvitationTemplates.getTemplateByIdForTier(info.invite_template, info.tier);
-      const sec = $('guest-scanner-view');
-      if (sec && tpl) {
-        sec.setAttribute('data-invite-themed', 'true');
-        sec.setAttribute('data-invite-font', tpl.font || 'serif');
-        sec.style.setProperty('--inv-bg', tpl.bg);
-        sec.style.setProperty('--inv-card', tpl.cardBg);
-        sec.style.setProperty('--inv-accent', tpl.accent);
-        sec.style.setProperty('--inv-text', tpl.text);
-        sec.style.setProperty('--inv-muted', tpl.muted);
-        sec.style.setProperty('--inv-border', tpl.border);
-        if ($('gs-ornament')) $('gs-ornament').textContent = tpl.ornament || '✦';
+      if (window.InvitationRenderer && tpl) {
+        window.InvitationRenderer.renderInvitationTheme($('guest-scanner-view'), $('gs-crest'), tpl);
       }
     }
     $('gs-couple').textContent = `${info.name} & ${info.partner_name}`;
     const dateStr = formatDateId(info.wedding_date);
     $('gs-wedding-date').textContent = dateStr || 'Hari Bahagia Kami';
+
+    if (info.wedding_date) {
+      const iso = normalizeDateStr(info.wedding_date);
+      const dt = new Date(iso + 'T08:00:00');
+      const lockup = $('gs-date-lockup');
+      if (lockup && !isNaN(dt.getTime())) {
+        const dayName = new Intl.DateTimeFormat('id-ID', { weekday: 'short' }).format(dt).toUpperCase();
+        const dayNum = String(dt.getDate()).padStart(2, '0');
+        const monthYear = new Intl.DateTimeFormat('id-ID', { month: 'short', year: 'numeric' }).format(dt).toUpperCase();
+        lockup.innerHTML = `<span class="invite-date-side">${escapeHtml(dayName)}</span><span class="invite-date-day">${escapeHtml(dayNum)}</span><span class="invite-date-side">${escapeHtml(monthYear)}</span>`;
+        lockup.classList.remove('hidden');
+      }
+    }
+
+    if (info.maps_url && /^https?:\/\//i.test(info.maps_url)) {
+      $('gs-maps-link').href = info.maps_url;
+      $('gs-maps-wrap')?.classList.remove('hidden');
+    }
 
     if (info.wedding_date) {
       const targetMs = new Date(normalizeDateStr(info.wedding_date) + 'T08:00:00').getTime();
