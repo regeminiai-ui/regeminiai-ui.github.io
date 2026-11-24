@@ -141,6 +141,7 @@ const MODULE_SCHEMAS = {
       { key: 'pax', label: 'Jumlah (Pax)', type: 'number', min: 1, default: 2 },
       { key: 'rsvp', label: 'Status RSVP', type: 'select', options: ['Belum', 'Hadir', 'Tidak Hadir'], default: 'Belum' },
       { key: 'phone', label: 'No. WhatsApp / HP', type: 'text' },
+      { key: 'table_zone', label: 'Meja / Zona Tamu (Opsional)', type: 'text' },
       { key: 'notes', label: 'Catatan', type: 'text' },
     ],
   },
@@ -488,6 +489,20 @@ function demoApiCall(action, payload) {
     return { guest: db.guests[idx] };
   }
 
+  if (action === 'publicAddWish') {
+    db.wishes = db.wishes || [];
+    const w = {
+      id: uid(),
+      user_id: payload.user_id,
+      guest_name: payload.guest_name,
+      message: payload.message,
+      created_at: new Date().toISOString(),
+    };
+    db.wishes.push(w);
+    saveDemoDb(db);
+    return { wish: w };
+  }
+
   if (action === 'publicPricing') {
     return { pricing: db.pricing || getDefaultPricing() };
   }
@@ -600,6 +615,7 @@ function demoApiCall(action, payload) {
     currentUser.wedding_date = payload.wedding_date || '';
     if (payload.invite_template) currentUser.invite_template = payload.invite_template;
     if (payload.maps_url !== undefined) currentUser.maps_url = String(payload.maps_url || '').trim();
+    if (payload.gift_info !== undefined) currentUser.gift_info = String(payload.gift_info || '').trim();
     saveDemoDb(db);
     const { password, ...safeUser } = currentUser;
     return { user: safeUser };
@@ -995,6 +1011,11 @@ function getTierCaps() {
     glassTheme: t === 'rich' || t === 'konglo',
     backupPdf: t !== 'sederhana',
     backupExcel: t === 'rich' || t === 'konglo',
+    waSend: t !== 'sederhana',
+    vendorReminder: t !== 'sederhana',
+    digitalGift: t === 'rich' || t === 'konglo',
+    wishes: t === 'rich' || t === 'konglo',
+    seatingTag: t === 'rich' || t === 'konglo',
     qrGeneral: t !== 'sederhana',
     qrPersonal: t === 'rich' || t === 'konglo',
     customDrive: t === 'rich' || t === 'konglo',
@@ -1058,11 +1079,14 @@ function applyTierUi() {
     applyUiStyle(localStorage.getItem('nikahplan_ui_style') || 'default');
   }
   $('btn-show-qr')?.classList.toggle('hidden', !caps.qrGeneral);
+  $('btn-wa-queue')?.classList.toggle('hidden', !caps.waSend);
+  $('dash-payment-reminder-card')?.classList.toggle('hidden', !caps.vendorReminder);
   $('btn-export-pdf')?.classList.toggle('hidden', !caps.backupPdf);
   $('btn-export-excel')?.classList.toggle('hidden', !caps.backupExcel);
   document.querySelector('.activity-card')?.classList.toggle('hidden', !caps.auditLog);
   $('set-partner-email')?.closest('.field')?.classList.toggle('hidden', !caps.collab);
   $('set-drive-folder')?.closest('.field')?.classList.toggle('hidden', !caps.customDrive);
+  $('set-gift-info')?.closest('.field')?.classList.toggle('hidden', !caps.digitalGift);
 
   // Read-only lock when expired or dummy preview
   const locked = expired || isDummyMode();
@@ -1115,6 +1139,7 @@ window.selectInviteTemplate = async (tplId) => {
       drive_folder_id: state.user.drive_folder_id || '',
       wedding_date: normalizeDateStr(state.user.wedding_date),
       maps_url: state.user.maps_url || '',
+      gift_info: state.user.gift_info || '',
       invite_template: tpl.id,
     });
     if (res?.user) saveSession(state.token, { ...state.user, ...res.user });
@@ -1135,6 +1160,7 @@ function renderUserHeader() {
   $('set-drive-folder').value = u.drive_folder_id || '';
   $('set-date').value = dateStr;
   if ($('set-maps-url')) $('set-maps-url').value = u.maps_url || '';
+  if ($('set-gift-info')) $('set-gift-info').value = u.gift_info || '';
   $('set-api-url').value = state.apiUrl || '';
 
   const cd = $('wedding-countdown');
@@ -1658,6 +1684,24 @@ function renderDashboard() {
   $('stat-checklist-pct').textContent = `${pct}%`;
   $('stat-checklist-count').textContent = `${doneCount} / ${checklists.length} selesai`;
 
+  const remListEl = $('dash-payment-reminders');
+  if (remListEl && getTierCaps().vendorReminder) {
+    const unpaidBudgets = budgets
+      .filter((b) => b.status !== 'Lunas' && Number(b.estimated || 0) > Number(b.paid || 0))
+      .map((b) => ({ title: b.item, kind: 'Anggaran', status: b.status, remain: Math.max(0, Number(b.estimated || 0) - Number(b.paid || 0)) }));
+    const unpaidVendors = vendors
+      .filter((v) => v.status !== 'Lunas' && v.status !== 'Batal' && Number(v.price || 0) > Number(v.dp_paid || 0))
+      .map((v) => ({ title: v.name, kind: 'Vendor', status: v.status, remain: Math.max(0, Number(v.price || 0) - Number(v.dp_paid || 0)) }));
+    const reminders = [...unpaidVendors, ...unpaidBudgets].slice(0, 8);
+    remListEl.innerHTML = reminders.length
+      ? reminders.map((r) => `
+          <li>
+            <span><strong>${escapeHtml(r.title)}</strong> <small class="muted">(${escapeHtml(r.kind)} • ${escapeHtml(r.status)})</small></span>
+            <strong style="color:var(--danger)">Sisa ${formatRp(r.remain)}</strong>
+          </li>`).join('')
+      : '<li class="muted">Semua tagihan vendor & anggaran sudah lunas.</li>';
+  }
+
   const sortedChecklist = [...checklists].sort((a, b) => {
     const aDone = a.done === 'Selesai' ? 1 : 0;
     const bDone = b.done === 'Selesai' ? 1 : 0;
@@ -1716,8 +1760,12 @@ function actionButtons(module, id) {
   const guestLinkBtn = (caps.qrPersonal && module === 'guests')
     ? `<button type="button" class="btn btn-sm btn-outline" onclick="copyGuestPersonalLink('${id}')">Link Scan</button>`
     : '';
+  const guestWaBtn = (caps.waSend && module === 'guests')
+    ? `<button type="button" class="btn btn-sm btn-outline" onclick="sendGuestWa('${id}')">Kirim WA</button>`
+    : '';
   return `<div class="action-btns">
     ${cicilanBtn}
+    ${guestWaBtn}
     ${guestLinkBtn}
     <button type="button" class="btn btn-sm btn-outline" onclick="openEditModal('${module}', '${id}')">Edit</button>
     <button type="button" class="btn btn-sm btn-danger" onclick="deleteRecord('${module}', '${id}')">Hapus</button>
@@ -1764,16 +1812,32 @@ function renderBudgets() {
 }
 
 function renderGuests() {
+  const calcEl = $('catering-calc-summary');
+  if (calcEl) {
+    const allGuests = state.data.guests || [];
+    const totalPax = allGuests.reduce((s, g) => s + Number(g.pax || 0), 0);
+    const hadirPax = allGuests.filter((g) => g.rsvp === 'Hadir').reduce((s, g) => s + Number(g.pax || 0), 0);
+    const activePax = allGuests.filter((g) => g.rsvp !== 'Tidak Hadir').reduce((s, g) => s + Number(g.pax || 0), 0);
+    const estPortions = Math.ceil(activePax * 1.1);
+    const estSouvenirs = allGuests.filter((g) => g.rsvp !== 'Tidak Hadir').length;
+    calcEl.innerHTML = `
+      <div class="stat-card"><span class="stat-label">Total Pax Terdaftar</span><strong class="stat-value">${totalPax}</strong></div>
+      <div class="stat-card"><span class="stat-label">Pax Konfirmasi Hadir</span><strong class="stat-value">${hadirPax}</strong></div>
+      <div class="stat-card"><span class="stat-label">Est. Porsi Katering (+10%)</span><strong class="stat-value">${estPortions}</strong></div>
+      <div class="stat-card"><span class="stat-label">Est. Souvenir</span><strong class="stat-value">${estSouvenirs}</strong></div>
+    `;
+  }
+
   const q = $('filter-guest-search').value.toLowerCase();
   const rsvp = $('filter-guest-rsvp').value;
   const rows = state.data.guests.filter((g) =>
-    (!q || (g.name + ' ' + g.group).toLowerCase().includes(q)) &&
+    (!q || (g.name + ' ' + g.group + ' ' + (g.table_zone || '')).toLowerCase().includes(q)) &&
     (!rsvp || g.rsvp === rsvp)
   );
   $('tbody-guests').innerHTML = rows.length
     ? rows.map((g) => `
       <tr>
-        <td data-label="Nama"><div><strong>${escapeHtml(g.name)}</strong>${g.notes ? `<div class="muted">${escapeHtml(g.notes)}</div>` : ''}</div></td>
+        <td data-label="Nama"><div><strong>${escapeHtml(g.name)}</strong>${g.table_zone ? ` <span class="badge badge-neutral">${escapeHtml(g.table_zone)}</span>` : ''}${g.notes ? `<div class="muted">${escapeHtml(g.notes)}</div>` : ''}</div></td>
         <td data-label="Pihak">${escapeHtml(g.side)}</td>
         <td data-label="Grup">${escapeHtml(g.group)}</td>
         <td data-label="Pax">${escapeHtml(g.pax)}</td>
@@ -1903,7 +1967,11 @@ function openModal(module, existingItem = null) {
   state.modalContext = { type: 'crud', module, id: existingItem?.id || null };
   $('modal-title').textContent = (existingItem ? 'Edit ' : 'Tambah ') + schema.title;
 
+  const submitBtn = $('modal-form')?.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.classList.remove('hidden');
+
   $('modal-fields').innerHTML = schema.fields.map((f) => {
+    if (f.key === 'table_zone' && !getTierCaps().seatingTag) return '';
     let val = existingItem ? (existingItem[f.key] ?? '') : (f.default ?? '');
     if (module === 'budgets' && f.key === 'actual' && existingItem && !Number(val)) {
       val = existingItem.estimated ?? 0;
@@ -2248,6 +2316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('pricing-showcase')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   $('btn-show-qr').addEventListener('click', openGuestQrModal);
+  $('btn-wa-queue')?.addEventListener('click', openWaQueueModal);
 
   $('modal-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -2507,6 +2576,7 @@ document.addEventListener('DOMContentLoaded', () => {
             drive_folder_id: $('set-drive-folder').value,
             wedding_date: $('set-date').value,
             maps_url: $('set-maps-url')?.value || '',
+            gift_info: $('set-gift-info')?.value || '',
           });
           saveSession(state.token, res.user);
           renderUserHeader();
@@ -3176,6 +3246,75 @@ window.copyGuestPersonalLink = async (guestId) => {
   }
 };
 
+function formatWaPhone(phone) {
+  let digits = String(phone || '').replace(/[^\d]/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('0')) digits = '62' + digits.slice(1);
+  return digits;
+}
+
+function getWaSentMap() {
+  try {
+    return JSON.parse(localStorage.getItem('nikahplan_wa_sent_' + (state.user?.id || 'guest')) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function markWaSent(guestId) {
+  const map = getWaSentMap();
+  map[guestId] = true;
+  localStorage.setItem('nikahplan_wa_sent_' + (state.user?.id || 'guest'), JSON.stringify(map));
+}
+
+function buildGuestWaUrl(guest) {
+  const num = formatWaPhone(guest.phone);
+  if (!num) return '';
+  const base = window.location.origin + window.location.pathname;
+  const link = `${base}?guest_checkin=${encodeURIComponent(state.user.id)}&guest_id=${encodeURIComponent(guest.id)}`;
+  const dateStr = state.user?.wedding_date ? formatDateId(state.user.wedding_date) : '';
+  const msg = `Assalamu'alaikum / Salam sejahtera Bapak/Ibu/Saudara/i *${guest.name}*,\n\nDengan memohon doa restu, kami mengundang Anda untuk menghadiri pernikahan kami:\n*${state.user.name} & ${state.user.partner_name}*${dateStr ? `\nTanggal: ${dateStr}` : ''}\n\nSilakan buka link undangan pribadi & scan QR kehadiran Anda di bawah ini:\n${link}\n\nTerima kasih.`;
+  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+}
+
+window.sendGuestWa = (guestId) => {
+  const guest = (state.data.guests || []).find((g) => g.id === guestId);
+  if (!guest) return;
+  const url = buildGuestWaUrl(guest);
+  if (!url) {
+    showToast(`Nomor WhatsApp untuk ${guest.name} belum diisi.`, true);
+    return;
+  }
+  markWaSent(guest.id);
+  window.open(url, '_blank', 'noopener');
+};
+
+window.openWaQueueModal = () => {
+  const list = (state.data.guests || []).filter((g) => formatWaPhone(g.phone));
+  if (!list.length) {
+    showToast('Belum ada tamu dengan No. WhatsApp yang valid.', true);
+    return;
+  }
+  const sent = getWaSentMap();
+  state.modalContext = { type: 'wa_queue' };
+  $('modal-title').textContent = `Antrean Kirim Undangan WA (${list.length} Tamu)`;
+  $('modal-fields').innerHTML = `
+    <p class="muted" style="margin-bottom:10px">Klik tombol <strong>Kirim</strong> satu per satu untuk membuka WhatsApp tamu berurutan.</p>
+    <div style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+      ${list.map((g) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid var(--border-soft);border-radius:10px;">
+          <div>
+            <strong>${escapeHtml(g.name)}</strong>
+            <div class="muted" style="font-size:0.78rem">${escapeHtml(g.phone)}${sent[g.id] ? ' • Sudah diklik' : ''}</div>
+          </div>
+          <button type="button" class="btn btn-sm ${sent[g.id] ? 'btn-outline' : 'btn-primary'}" onclick="sendGuestWa('${g.id}'); this.textContent='Terkirim'; this.className='btn btn-sm btn-outline';">${sent[g.id] ? 'Kirim Ulang' : 'Kirim WA'}</button>
+        </div>`).join('')}
+    </div>`;
+  const submitBtn = $('modal-form')?.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.classList.add('hidden');
+  $('modal-overlay').classList.remove('hidden');
+};
+
 async function initGuestScannerView(userId, guestId) {
   $('auth-view').classList.add('hidden');
   $('app-view').classList.add('hidden');
@@ -3226,6 +3365,58 @@ async function initGuestScannerView(userId, guestId) {
     guestName = info.guest ? info.guest.name : 'Tamu Undangan';
     $('gs-guest-greeting').textContent = guestName;
     $('gs-guest-pax').textContent = info.guest ? `Undangan berlaku untuk ${info.guest.pax || 1} orang` : '';
+    const zoneEl = $('gs-guest-zone');
+    if (zoneEl && info.guest?.table_zone && (info.tier === 'rich' || info.tier === 'konglo')) {
+      zoneEl.textContent = `Meja / Zona: ${info.guest.table_zone}`;
+      zoneEl.classList.remove('hidden');
+    }
+
+    if (info.gift_info && (info.tier === 'rich' || info.tier === 'konglo')) {
+      $('gs-gift-text').textContent = info.gift_info;
+      $('gs-gift-box')?.classList.remove('hidden');
+      $('btn-gs-copy-gift')?.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(info.gift_info);
+          showToast('Info rekening berhasil disalin!');
+        } catch {
+          prompt('Salin info rekening:', info.gift_info);
+        }
+      });
+    }
+
+    if (info.tier === 'rich' || info.tier === 'konglo') {
+      $('gs-wishes-box')?.classList.remove('hidden');
+      if ($('gs-wish-name') && info.guest?.name) $('gs-wish-name').value = info.guest.name;
+      const renderWishes = (wishesList) => {
+        if (!$('gs-wishes-list')) return;
+        $('gs-wishes-list').innerHTML = wishesList.length
+          ? wishesList.map((w) => `<li><strong>${escapeHtml(w.guest_name)}</strong><span>${escapeHtml(w.message)}</span></li>`).join('')
+          : '<li class="muted">Jadilah yang pertama memberikan doa restu.</li>';
+      };
+      const curWishes = info.wishes || [];
+      renderWishes(curWishes);
+      $('gs-wish-form')?.addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        const btn = ev.target.querySelector('button[type="submit"]');
+        withButtonLock(btn, 'Mengirim...', async () => {
+          try {
+            const res = await apiCall('publicAddWish', {
+              user_id: userId,
+              guest_name: $('gs-wish-name').value.trim(),
+              message: $('gs-wish-msg').value.trim(),
+            });
+            if (res?.wish) {
+              curWishes.unshift(res.wish);
+              renderWishes(curWishes);
+              $('gs-wish-msg').value = '';
+              showToast('Terima kasih atas ucapan & doa restunya!');
+            }
+          } catch (err) {
+            showToast(err.message, true);
+          }
+        });
+      });
+    }
 
     const rundowns = info.rundowns || [];
     if (rundowns.length && $('gs-rundown-list')) {
