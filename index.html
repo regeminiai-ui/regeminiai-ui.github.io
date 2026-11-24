@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
   <link rel="icon" type="image/png" href="assets/img/logo-light.png" />
-  <link rel="stylesheet" href="styles.css?v=62" />
+  <link rel="stylesheet" href="styles.css?v=63" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -434,6 +434,7 @@
           <img class="brand-logo brand-logo-light" src="assets/img/logo-light.png" alt="My Weeding Plan" />
           <img class="brand-logo brand-logo-dark" src="assets/img/logo-dark.png" alt="My Weeding Plan" />
         </span>
+        <div id="gs-ornament" class="invite-ornament">✦</div>
         <div class="invite-eyebrow">The Wedding Of</div>
         <h1 id="gs-couple" class="invite-couple">Undangan Pernikahan</h1>
         <p id="gs-wedding-date" class="muted">Memuat tanggal acara...</p>
@@ -904,6 +905,17 @@
           </form>
         </div>
 
+        <div id="invite-template-card" class="card form-stack" style="margin-top:18px">
+          <div class="plan-card-head">
+            <div>
+              <h3>Template Undangan Digital Tamu</h3>
+              <p class="muted">Pilih tema tampilan halaman undangan pribadi tamu Anda (otomatis sesuai paket aktif).</p>
+            </div>
+            <span id="tpl-count-badge" class="badge badge-ok">5 Template</span>
+          </div>
+          <div id="template-picker-grid" class="template-picker-grid"></div>
+        </div>
+
         <form id="redeem-form" class="card danger-card form-stack">
           <h3>Paket & Masa Aktif</h3>
           <p id="settings-plan-info" class="muted">-</p>
@@ -960,7 +972,8 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="ai-planner.js?v=62"></script>
-  <script src="app.js?v=62"></script>
+  <script src="template/catalog.js?v=63"></script>
+  <script src="ai-planner.js?v=63"></script>
+  <script src="app.js?v=63"></script>
 </body>
 </html>

@@ -773,6 +773,7 @@ function renderPricingShowcase(pricingData) {
       features: [
         'Masa Aktif 6 Bulan',
         '1 Akun (Single)',
+        '5 Template Undangan Digital',
         'Overview & Countdown Pernikahan',
         '2 Template Rencana (KUA Hemat & Sederhana)',
         'Rencana Anggaran (Budget)',
@@ -790,6 +791,7 @@ function renderPricingShowcase(pricingData) {
       features: [
         'Masa Aktif 6 Bulan',
         '2 Akun Pasangan (Sync Real-time)',
+        '10 Template Undangan Digital',
         'Semua Fitur Sederhana & Semua Template',
         'Vendor, Kontrak & Upload Kwitansi',
         'Rundown Acara & Tabungan / Cicilan',
@@ -807,6 +809,7 @@ function renderPricingShowcase(pricingData) {
       features: [
         'Masa Aktif 13 Bulan (12 + 1 Bonus)',
         'Semua Fitur Medium',
+        '25 Template Undangan Digital',
         'Tema Eksklusif Neumorphism (Light & Dark)',
         'Backup Data JSON, Excel & PDF',
         'Link QR & Undangan Personal per Tamu',
@@ -824,6 +827,7 @@ function renderPricingShowcase(pricingData) {
       features: [
         'Masa Aktif 15 + 3 Bulan Bonus',
         'Semua Fitur Rich',
+        '50 Template Undangan Digital',
         'AI Wedding Plan Generator (Rekomendasi Otomatis)',
         'Simpan & Kelola Banyak Konsep Pernikahan',
         'Terapkan Plan AI Langsung ke Budget & Checklist',
@@ -1065,7 +1069,54 @@ function applyTierUi() {
   document.querySelectorAll('[data-add], #btn-reset-all, #profile-form button[type="submit"], #redeem-form button[type="submit"], #btn-export-json, #btn-export-pdf, #btn-export-excel, #btn-show-qr').forEach((el) => {
     el.disabled = locked;
   });
+
+  renderTemplatePicker(caps.tier, locked);
 }
+
+function renderTemplatePicker(tier, locked = false) {
+  const grid = $('template-picker-grid');
+  const badge = $('tpl-count-badge');
+  if (!grid || !window.InvitationTemplates) return;
+  const list = window.InvitationTemplates.getTemplatesForTier(tier);
+  if (badge) badge.textContent = `${list.length} Template`;
+  const activeId = window.InvitationTemplates.getTemplateByIdForTier(state.user?.invite_template, tier).id;
+
+  grid.innerHTML = list.map((tpl) => {
+    const isActive = tpl.id === activeId;
+    return `
+      <button type="button" class="tpl-item${isActive ? ' active' : ''}" ${locked ? 'disabled' : ''} onclick="selectInviteTemplate('${tpl.id}')">
+        <div class="tpl-swatch" style="background:${tpl.bg};color:${tpl.text};border-color:${tpl.border};">
+          <span>${escapeHtml(tpl.ornament)} ${escapeHtml(tpl.code)}</span>
+          <span style="color:${tpl.accent};">${isActive ? 'Aktif' : 'Pilih'}</span>
+        </div>
+        <div class="tpl-meta">
+          <span class="tpl-name">${escapeHtml(tpl.name)}</span>
+          <span class="tpl-cat">${escapeHtml(tpl.category)}</span>
+        </div>
+      </button>`;
+  }).join('');
+}
+
+window.selectInviteTemplate = async (tplId) => {
+  if (!state.user || !window.InvitationTemplates) return;
+  const tier = getTierCaps().tier;
+  const tpl = window.InvitationTemplates.getTemplateByIdForTier(tplId, tier);
+  try {
+    const res = await apiCall('updateProfile', {
+      name: state.user.name,
+      partner_name: state.user.partner_name,
+      partner_email: state.user.partner_email || '',
+      drive_folder_id: state.user.drive_folder_id || '',
+      wedding_date: normalizeDateStr(state.user.wedding_date),
+      invite_template: tpl.id,
+    });
+    if (res?.user) saveSession(state.token, { ...state.user, ...res.user });
+    renderTemplatePicker(tier, isAccountExpired() || isDummyMode());
+    showToast(`Template undangan "${tpl.name}" (${tpl.code}) diaktifkan!`);
+  } catch (err) {
+    showToast(err.message, true);
+  }
+};
 
 function renderUserHeader() {
   const u = state.user;
@@ -3125,6 +3176,21 @@ async function initGuestScannerView(userId, guestId) {
   let guestName = 'Tamu Undangan';
   try {
     const info = await apiCall('publicEventInfo', { user_id: userId, guest_id: guestId });
+    if (window.InvitationTemplates) {
+      const tpl = window.InvitationTemplates.getTemplateByIdForTier(info.invite_template, info.tier);
+      const sec = $('guest-scanner-view');
+      if (sec && tpl) {
+        sec.setAttribute('data-invite-themed', 'true');
+        sec.setAttribute('data-invite-font', tpl.font || 'serif');
+        sec.style.setProperty('--inv-bg', tpl.bg);
+        sec.style.setProperty('--inv-card', tpl.cardBg);
+        sec.style.setProperty('--inv-accent', tpl.accent);
+        sec.style.setProperty('--inv-text', tpl.text);
+        sec.style.setProperty('--inv-muted', tpl.muted);
+        sec.style.setProperty('--inv-border', tpl.border);
+        if ($('gs-ornament')) $('gs-ornament').textContent = tpl.ornament || '✦';
+      }
+    }
     $('gs-couple').textContent = `${info.name} & ${info.partner_name}`;
     const dateStr = formatDateId(info.wedding_date);
     $('gs-wedding-date').textContent = dateStr || 'Hari Bahagia Kami';
