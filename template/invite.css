@@ -216,6 +216,7 @@
 #guest-scanner-view[data-invite-themed="true"] .invite-checkin-box {
   border-top: 1.5px dashed var(--inv-border);
   padding-top: 16px;
+  margin-bottom: 18px;
 }
 
 #guest-scanner-view[data-invite-themed="true"] .btn-primary {
