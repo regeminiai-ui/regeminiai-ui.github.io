@@ -775,12 +775,11 @@ function renderPricingShowcase(pricingData) {
       features: [
         'Masa Aktif 6 Bulan',
         '1 Akun (Single)',
+        '__GUEST_LIMIT__',
         '5 Template Undangan Digital',
-        'Overview & Countdown Pernikahan',
-        '2 Template Rencana (KUA Hemat & Sederhana)',
-        'Rencana Anggaran (Budget)',
-        'Daftar Tamu & RSVP',
-        'Checklist Tugas',
+        'Overview, Anggaran & Checklist',
+        'Daftar Tamu, RSVP & Google Maps',
+        '2 Template Rencana (KUA & Sederhana)',
         'Backup Data JSON',
       ],
     },
@@ -793,13 +792,12 @@ function renderPricingShowcase(pricingData) {
       features: [
         'Masa Aktif 6 Bulan',
         '2 Akun Pasangan (Sync Real-time)',
+        '__GUEST_LIMIT__',
         '10 Template Undangan Digital',
-        'Semua Fitur Sederhana & Semua Template',
-        'Vendor, Kontrak & Upload Kwitansi',
-        'Rundown Acara & Tabungan / Cicilan',
-        'Moodboard / Aset & Dark Mode',
-        'Self Check-In Tamu (QR Umum)',
-        'Backup Data JSON & Laporan PDF',
+        'Semua Fitur Sederhana & Semua Plan',
+        'Vendor, Rundown, Cicilan & Moodboard',
+        'Self Check-In QR Umum & Dark Mode',
+        'Backup Data JSON & PDF',
       ],
     },
     {
@@ -809,15 +807,15 @@ function renderPricingShowcase(pricingData) {
       featured: true,
       defaultBadge: 'Paling Lengkap',
       features: [
-        'Masa Aktif 13 Bulan (12 + 1 Bonus)',
-        'Semua Fitur Medium',
+        'Masa Aktif 12 + 1 Bulan Bonus',
+        '2 Akun Pasangan (Sync Real-time)',
+        '__GUEST_LIMIT__',
         '25 Template Undangan Digital',
-        'Tema Eksklusif Neumorphism (Light & Dark)',
+        'Semua Fitur Medium',
+        'Tema Neumorphism (Light & Dark)',
+        'Undangan Personal, Scan QR & Tanpa Watermark',
+        'Custom Drive Pribadi & Audit Log',
         'Backup Data JSON, Excel & PDF',
-        'Link QR & Undangan Personal per Tamu',
-        'Tanpa Watermark di Halaman Check-In',
-        'Custom Folder Google Drive Pribadi',
-        'Riwayat Aktivitas (Audit Log) Pasangan',
       ],
     },
     {
@@ -828,11 +826,14 @@ function renderPricingShowcase(pricingData) {
       defaultBadge: 'VIP AI',
       features: [
         'Masa Aktif 15 + 3 Bulan Bonus',
-        'Semua Fitur Rich',
+        '2 Akun Pasangan (Sync Real-time)',
+        '__GUEST_LIMIT__',
         '50 Template Undangan Digital',
-        'AI Wedding Plan Generator (Rekomendasi Otomatis)',
-        'Simpan & Kelola Banyak Konsep Pernikahan',
-        'Terapkan Plan AI Langsung ke Budget & Checklist',
+        'Semua Fitur Rich',
+        'AI Wedding Plan Generator Otomatis',
+        'Simpan & Kelola Banyak Konsep',
+        'Terapkan Plan AI ke Budget & Checklist',
+        'Backup Data JSON, Excel & PDF',
       ],
     },
   ];
@@ -843,10 +844,7 @@ function renderPricingShowcase(pricingData) {
     const promoPrice = Number(cfg.promo_price || 0);
     const maxGuests = Number(cfg.max_guests ?? getDefaultPricing()[t.key]?.max_guests ?? 0);
     const guestLimitText = maxGuests > 0 ? `Maks. ${maxGuests.toLocaleString('id-ID')} Tamu` : 'Kapasitas Tamu Unlimited';
-    const tierFeatures = [...t.features];
-    const guestIdx = tierFeatures.findIndex((f) => /daftar tamu/i.test(f));
-    if (guestIdx !== -1) tierFeatures[guestIdx] = `Daftar Tamu & RSVP (${guestLimitText})`;
-    else tierFeatures.splice(1, 0, guestLimitText);
+    const tierFeatures = t.features.map((f) => (f === '__GUEST_LIMIT__' ? guestLimitText : f));
     const hasPromo = promoPrice > 0 && promoPrice < normalPrice;
     const discountPct = hasPromo ? Math.round(((normalPrice - promoPrice) / normalPrice) * 100) : 0;
     const effectivePrice = hasPromo ? promoPrice : normalPrice;
