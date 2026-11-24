@@ -47,6 +47,104 @@
   animation: invSpin 0.85s linear infinite;
 }
 
+/* Interactive Cover & Animated Couple Stick-Man */
+@keyframes coupleSway {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(1deg); }
+}
+
+@keyframes heartFloat {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.85; }
+  50% { transform: translateY(-5px) scale(1.15); opacity: 1; }
+}
+
+.invite-couple-stick-svg {
+  width: 195px;
+  height: 130px;
+  margin: 4px auto 8px;
+  display: block;
+}
+
+.invite-couple-stick-svg .stick-groom,
+.invite-couple-stick-svg .stick-bride {
+  transform-origin: center bottom;
+  animation: coupleSway 3.4s ease-in-out infinite;
+}
+
+.invite-couple-stick-svg .stick-bride {
+  animation-delay: 0.45s;
+}
+
+.invite-couple-stick-svg .stick-heart {
+  transform-origin: center;
+  animation: heartFloat 2.2s ease-in-out infinite;
+}
+
+.tpl-thumb-couple-wrap .invite-couple-stick-svg {
+  width: 105px;
+  height: 70px;
+  margin: 0 auto 2px;
+}
+
+.invite-cover {
+  position: relative;
+  z-index: 2;
+  padding: 12px 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.invite-cover.is-opening {
+  opacity: 0;
+  transform: translateY(-24px) scale(0.95);
+}
+
+.invite-cover-guest {
+  width: 100%;
+  margin: 8px 0 6px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--inv-soft, var(--surface-alt));
+  border: 1px dashed var(--inv-border, var(--border-soft));
+}
+
+.invite-open-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-weight: 700;
+  animation: heartFloat 2.6s ease-in-out infinite;
+}
+
+/* Canva-style Scroll Reveal Transitions */
+.invite-reveal {
+  opacity: 0;
+  transform: translateY(28px) scale(0.97);
+  transition: opacity 0.72s cubic-bezier(0.22, 1, 0.36, 1), transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.invite-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.invite-footer-scene-wrap {
+  margin-top: 16px;
+  opacity: 0.9;
+}
+
+.invite-footer-scene {
+  width: 100%;
+  max-height: 88px;
+  display: block;
+}
+
 .invite-corner-svg {
   position: absolute;
   width: 175px;

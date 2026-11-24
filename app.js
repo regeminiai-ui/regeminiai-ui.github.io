@@ -3341,7 +3341,9 @@ async function initGuestScannerView(userId, guestId) {
         window.InvitationRenderer.renderInvitationTheme($('guest-scanner-view'), $('gs-crest'), tpl);
       }
     }
-    $('gs-couple').textContent = `${info.name} & ${info.partner_name}`;
+    const coupleTitle = `${info.name} & ${info.partner_name}`;
+    $('gs-couple').textContent = coupleTitle;
+    if ($('gs-cover-couple')) $('gs-cover-couple').textContent = coupleTitle;
     const dateStr = formatDateId(info.wedding_date);
     $('gs-wedding-date').textContent = dateStr || 'Hari Bahagia Kami';
 
@@ -3375,6 +3377,7 @@ async function initGuestScannerView(userId, guestId) {
 
     guestName = info.guest ? info.guest.name : 'Tamu Undangan';
     $('gs-guest-greeting').textContent = guestName;
+    if ($('gs-cover-guest')) $('gs-cover-guest').textContent = guestName;
     $('gs-guest-pax').textContent = info.guest ? `Undangan berlaku untuk ${info.guest.pax || 1} orang` : '';
     const zoneEl = $('gs-guest-zone');
     if (zoneEl && info.guest?.table_zone && (info.tier === 'rich' || info.tier === 'konglo')) {
@@ -3450,8 +3453,25 @@ async function initGuestScannerView(userId, guestId) {
     showToast(err.message, true);
   } finally {
     $('gs-loader')?.classList.add('hidden');
-    $('gs-invite-content')?.classList.remove('hidden');
+    if ($('gs-cover')) {
+      $('gs-cover').classList.remove('hidden');
+    } else {
+      $('gs-invite-content')?.classList.remove('hidden');
+      window.InvitationRenderer?.initScrollReveal($('gs-invite-content'));
+    }
   }
+
+  $('btn-open-invitation')?.addEventListener('click', () => {
+    const cover = $('gs-cover');
+    const content = $('gs-invite-content');
+    if (!cover || !content) return;
+    cover.classList.add('is-opening');
+    setTimeout(() => {
+      cover.classList.add('hidden');
+      content.classList.remove('hidden');
+      window.InvitationRenderer?.initScrollReveal(content);
+    }, 450);
+  });
 
   let scanner = null;
   $('btn-start-scan')?.addEventListener('click', async () => {
