@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Weeding Plan — Perencana Pernikahan</title>
   <link rel="icon" type="image/png" href="assets/img/logo-light.png" />
-  <link rel="stylesheet" href="styles.css?v=65" />
-  <link rel="stylesheet" href="template/invite.css?v=65" />
+  <link rel="stylesheet" href="styles.css?v=66" />
+  <link rel="stylesheet" href="template/invite.css?v=66" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Cormorant+Garamond:wght@600;700&family=Great+Vibes&family=Patrick+Hand&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -463,11 +463,10 @@
         </div>
 
         <div id="gs-scan-box" class="invite-checkin-box form-stack">
-          <h4>Konfirmasi &amp; Absen Kehadiran</h4>
-          <p class="muted">Silakan klik tombol di bawah untuk mencatat kehadiran Anda, atau scan QR Code di meja penerima tamu.</p>
-          <button type="button" id="btn-direct-checkin" class="btn btn-primary btn-full">Absen Hadir Sekarang</button>
+          <h4>Absen Kehadiran (Scan QR)</h4>
+          <p class="muted">Arahkan kamera ke <strong>QR Code</strong> di meja penerima tamu saat tiba di lokasi acara untuk mencatat kehadiran Anda.</p>
           <div id="qr-reader"></div>
-          <button type="button" id="btn-start-scan" class="btn btn-outline btn-full">Scan QR di Lokasi Acara</button>
+          <button type="button" id="btn-start-scan" class="btn btn-primary btn-full">Scan QR di Lokasi Acara</button>
         </div>
 
         <div id="gs-scan-success" class="checkin-success hidden">
@@ -924,7 +923,10 @@
             </div>
             <span id="tpl-count-badge" class="badge badge-ok">5 Template</span>
           </div>
-          <div id="template-picker-grid" class="template-picker-grid"></div>
+          <div class="tpl-studio-layout">
+            <div id="template-picker-grid" class="template-picker-grid"></div>
+            <div id="tpl-live-preview" class="tpl-live-preview-pane"></div>
+          </div>
         </div>
 
         <form id="redeem-form" class="card danger-card form-stack">
@@ -983,9 +985,9 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="template/catalog.js?v=65"></script>
-  <script src="template/renderer.js?v=65"></script>
-  <script src="ai-planner.js?v=65"></script>
-  <script src="app.js?v=65"></script>
+  <script src="template/catalog.js?v=66"></script>
+  <script src="template/renderer.js?v=66"></script>
+  <script src="ai-planner.js?v=66"></script>
+  <script src="app.js?v=66"></script>
 </body>
 </html>

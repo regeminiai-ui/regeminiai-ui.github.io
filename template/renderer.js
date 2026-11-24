@@ -99,6 +99,40 @@
     return `<svg class="tpl-swatch-svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>`;
   }
 
+  function renderLivePreview(previewEl, tpl, coupleTitle, dateText) {
+    if (!previewEl || !tpl) return;
+    const cornerMarkup = buildCornerSvg(tpl);
+    const crestMarkup = buildCrestSvg(tpl);
+    const fontFamily = tpl.font === 'script'
+      ? "'Great Vibes', 'Caveat', cursive"
+      : (tpl.font === 'sans' ? "'Plus Jakarta Sans', sans-serif" : "'Cormorant Garamond', Georgia, serif");
+    const coupleSize = tpl.font === 'script' ? '2rem' : '1.55rem';
+    const textTransform = tpl.font === 'classic' ? 'uppercase' : 'none';
+
+    previewEl.innerHTML = `
+      <div class="tpl-preview-head">
+        <span>Preview Langsung: <strong>${tpl.code} — ${tpl.name}</strong></span>
+        <span class="badge badge-neutral">${tpl.category}</span>
+      </div>
+      <div class="tpl-preview-stage" style="background:${tpl.bg};">
+        <div class="tpl-preview-card" style="background:${tpl.cardBg};border-color:${tpl.border};color:${tpl.text};">
+          <div class="invite-corner-svg invite-corner-tr">${cornerMarkup}</div>
+          <div class="invite-corner-svg invite-corner-bl">${cornerMarkup}</div>
+          <div class="invite-inner-frame">
+            ${crestMarkup}
+            <div style="color:${tpl.accent};font-size:0.68rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;">The Wedding Of</div>
+            <div style="font-family:${fontFamily};font-size:${coupleSize};text-transform:${textTransform};font-weight:700;margin:4px 0;">${coupleTitle || 'Nama Pasangan'}</div>
+            <div style="color:${tpl.muted};font-size:0.78rem;margin-bottom:10px;">${dateText || 'Sabtu, 23 Januari 2028'}</div>
+            <div style="background:${tpl.softBg};border:1px dashed ${tpl.border};border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+              <div style="color:${tpl.muted};font-size:0.68rem;">Kepada Yth. Bapak/Ibu/Saudara/i</div>
+              <div style="font-weight:700;font-size:0.9rem;">Nama Tamu Undangan</div>
+            </div>
+            <div style="background:${tpl.accent};color:#fff;border-radius:8px;padding:8px 12px;font-size:0.76rem;font-weight:700;">Scan QR di Lokasi Acara</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
   function renderInvitationTheme(containerEl, crestEl, tpl) {
     if (!containerEl || !tpl) return;
     containerEl.setAttribute('data-invite-themed', 'true');
@@ -134,5 +168,6 @@
   global.InvitationRenderer = {
     renderInvitationTheme,
     getMiniBadgeSvg,
+    renderLivePreview,
   };
 })(window);

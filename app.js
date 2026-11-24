@@ -1078,13 +1078,14 @@ function applyTierUi() {
 function renderTemplatePicker(tier, locked = false) {
   const grid = $('template-picker-grid');
   const badge = $('tpl-count-badge');
+  const previewEl = $('tpl-live-preview');
   if (!grid || !window.InvitationTemplates) return;
   const list = window.InvitationTemplates.getTemplatesForTier(tier);
   if (badge) badge.textContent = `${list.length} Template`;
-  const activeId = window.InvitationTemplates.getTemplateByIdForTier(state.user?.invite_template, tier).id;
+  const activeTpl = window.InvitationTemplates.getTemplateByIdForTier(state.user?.invite_template, tier);
 
   grid.innerHTML = list.map((tpl) => {
-    const isActive = tpl.id === activeId;
+    const isActive = tpl.id === activeTpl.id;
     const svgIcon = window.InvitationRenderer ? window.InvitationRenderer.getMiniBadgeSvg(tpl) : '';
     return `
       <button type="button" class="tpl-item${isActive ? ' active' : ''}" ${locked ? 'disabled' : ''} onclick="selectInviteTemplate('${tpl.id}')">
@@ -1098,6 +1099,12 @@ function renderTemplatePicker(tier, locked = false) {
         </div>
       </button>`;
   }).join('');
+
+  if (previewEl && window.InvitationRenderer) {
+    const couple = `${state.user?.name || 'Nama'} & ${state.user?.partner_name || 'Pasangan'}`;
+    const dateTxt = state.user?.wedding_date ? formatDateId(state.user.wedding_date) : 'Tanggal Pernikahan';
+    window.InvitationRenderer.renderLivePreview(previewEl, activeTpl, escapeHtml(couple), escapeHtml(dateTxt));
+  }
 }
 
 window.selectInviteTemplate = async (tplId) => {
@@ -3244,21 +3251,6 @@ async function initGuestScannerView(userId, guestId) {
   } catch (err) {
     showToast(err.message, true);
   }
-
-  $('btn-direct-checkin')?.addEventListener('click', () => {
-    const btn = $('btn-direct-checkin');
-    withButtonLock(btn, 'Mencatat kehadiran...', async () => {
-      try {
-        const res = await apiCall('publicGuestQrCheckin', { user_id: userId, guest_id: guestId });
-        $('gs-scan-box').classList.add('hidden');
-        $('gs-success-msg').textContent = `Terima kasih ${res.guest?.name || guestName}, status Anda otomatis tercatat Hadir!`;
-        $('gs-scan-success').classList.remove('hidden');
-        showToast('Kehadiran berhasil tercatat!');
-      } catch (err) {
-        showToast(err.message, true);
-      }
-    });
-  });
 
   let scanner = null;
   $('btn-start-scan')?.addEventListener('click', async () => {
