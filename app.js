@@ -4,7 +4,7 @@
  */
 
 // --- Origin Lock & Encrypted API Config ---
-const SEALED_API_HOST = 'bfoHqr6ZujU7XzBTuHF4lFAC5c87q2l0IrBQwP4cn/gq/VybhsXseSpEFGiwPTmJcyS6jjbXY2kFyH/VqD3FuHLRMJX5+fBqFwh1CqcxPcVVGPf8FMl+dHuyTc3WIqfhXcUno6WRoXtwCh0VrX0zkA==';
+const SEALED_API_HOST = 'WrV/lfenwJj+YtccE93O4T9EdfV0DaAy+jEmTP41O3UdsiSkz/uW1O958ycbkY/8HGIqtHlxqi/dSQlZqBRhNUWeSKqwx4rH0jWSRQydi7A6XmfGW2+3MqMzO0HWCwNsaopfnOyv29a1N/paBtGF5Q==';
 const SEALED_API_OWNER = '5cucqnbZBUR32aJaMP4AmR5TR1HknniOuXZVvvdZlmqizMebToVTCGbChmE4skGEPXUYEOnicpOeDnqroXjMKvrgq5UxuU8bW47nAy++RcgbSVViy/xvjuB0SLPfZ65z1fS8o23RHgo8jI8cJfJLnQ==';
 const OWNER_KEY_HASH = '8dbfe8da05e32a6b04bad033408a2efe713c203d81b01be1d45938df942bf919';
 const OWNER_KEY_STORAGE = 'nikahplan_owner_key';
@@ -80,8 +80,8 @@ function unsealTextSync(b64, pass) {
 
 function resolveAuthorizedApiUrl() {
   const host = (window.location.hostname || '').toLowerCase();
-  if (host === 'regeminiai-ui.github.io') {
-    const url = unsealTextSync(SEALED_API_HOST, host);
+  if (host === 'myweedingplan.my.id' || host === 'www.myweedingplan.my.id' || host === 'regeminiai-ui.github.io') {
+    const url = unsealTextSync(SEALED_API_HOST, 'myweedingplan.my.id');
     if (url) return url;
   }
   const savedOwnerKey = (localStorage.getItem(OWNER_KEY_STORAGE) || '').trim();
