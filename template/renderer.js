@@ -99,6 +99,32 @@
     return `<svg class="tpl-swatch-svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>`;
   }
 
+  function renderCardThumbnail(tpl, coupleTitle, dateText) {
+    const cornerMarkup = buildCornerSvg(tpl);
+    const crestMarkup = buildCrestSvg(tpl);
+    const fontFamily = tpl.font === 'script'
+      ? "'Great Vibes', 'Caveat', cursive"
+      : (tpl.font === 'sans' ? "'Plus Jakarta Sans', sans-serif" : "'Cormorant Garamond', Georgia, serif");
+    const coupleSize = tpl.font === 'script' ? '1.35rem' : '1.05rem';
+    const textTransform = tpl.font === 'classic' ? 'uppercase' : 'none';
+
+    return `
+      <div class="tpl-thumb-stage" style="background:${tpl.bg};">
+        <div class="tpl-thumb-card" style="background:${tpl.cardBg};border-color:${tpl.border};color:${tpl.text};">
+          <div class="invite-corner-svg invite-corner-tr">${cornerMarkup}</div>
+          <div class="invite-corner-svg invite-corner-bl">${cornerMarkup}</div>
+          <div class="invite-inner-frame">
+            ${crestMarkup}
+            <div style="color:${tpl.accent};font-size:0.55rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;">The Wedding Of</div>
+            <div style="font-family:${fontFamily};font-size:${coupleSize};text-transform:${textTransform};font-weight:700;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${coupleTitle}</div>
+            <div style="color:${tpl.muted};font-size:0.65rem;margin-bottom:6px;">${dateText}</div>
+            <div style="background:${tpl.softBg};border:1px dashed ${tpl.border};border-radius:6px;padding:4px 6px;margin-bottom:6px;font-size:0.62rem;font-weight:600;">Nama Tamu</div>
+            <div style="background:${tpl.accent};color:#fff;border-radius:6px;padding:4px 8px;font-size:0.62rem;font-weight:700;">Scan QR Hadir</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
   function renderLivePreview(previewEl, tpl, coupleTitle, dateText) {
     if (!previewEl || !tpl) return;
     const cornerMarkup = buildCornerSvg(tpl);
@@ -169,5 +195,6 @@
     renderInvitationTheme,
     getMiniBadgeSvg,
     renderLivePreview,
+    renderCardThumbnail,
   };
 })(window);

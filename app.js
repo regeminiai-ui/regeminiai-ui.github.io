@@ -1078,19 +1078,23 @@ function applyTierUi() {
 function renderTemplatePicker(tier, locked = false) {
   const grid = $('template-picker-grid');
   const badge = $('tpl-count-badge');
-  const previewEl = $('tpl-live-preview');
   if (!grid || !window.InvitationTemplates) return;
   const list = window.InvitationTemplates.getTemplatesForTier(tier);
   if (badge) badge.textContent = `${list.length} Template`;
   const activeTpl = window.InvitationTemplates.getTemplateByIdForTier(state.user?.invite_template, tier);
+  const couple = escapeHtml(`${state.user?.name || 'Nama'} & ${state.user?.partner_name || 'Pasangan'}`);
+  const dateTxt = escapeHtml(state.user?.wedding_date ? formatDateId(state.user.wedding_date) : 'Tanggal Pernikahan');
 
   grid.innerHTML = list.map((tpl) => {
     const isActive = tpl.id === activeTpl.id;
-    const svgIcon = window.InvitationRenderer ? window.InvitationRenderer.getMiniBadgeSvg(tpl) : '';
+    const thumbHtml = window.InvitationRenderer
+      ? window.InvitationRenderer.renderCardThumbnail(tpl, couple, dateTxt)
+      : '';
     return `
       <button type="button" class="tpl-item${isActive ? ' active' : ''}" ${locked ? 'disabled' : ''} onclick="selectInviteTemplate('${tpl.id}')">
-        <div class="tpl-swatch" style="background:${tpl.bg};color:${tpl.text};border-color:${tpl.border};">
-          <span style="display:inline-flex;align-items:center;gap:6px;">${svgIcon} ${escapeHtml(tpl.code)}</span>
+        ${thumbHtml}
+        <div class="tpl-swatch" style="background:${tpl.bg};color:${tpl.text};border-color:${tpl.border};margin-top:4px;height:30px;">
+          <span>${escapeHtml(tpl.code)}</span>
           <span style="color:${tpl.accent};">${isActive ? 'Aktif' : 'Pilih'}</span>
         </div>
         <div class="tpl-meta">
@@ -1099,12 +1103,6 @@ function renderTemplatePicker(tier, locked = false) {
         </div>
       </button>`;
   }).join('');
-
-  if (previewEl && window.InvitationRenderer) {
-    const couple = `${state.user?.name || 'Nama'} & ${state.user?.partner_name || 'Pasangan'}`;
-    const dateTxt = state.user?.wedding_date ? formatDateId(state.user.wedding_date) : 'Tanggal Pernikahan';
-    window.InvitationRenderer.renderLivePreview(previewEl, activeTpl, escapeHtml(couple), escapeHtml(dateTxt));
-  }
 }
 
 window.selectInviteTemplate = async (tplId) => {

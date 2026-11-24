@@ -290,6 +290,34 @@
   margin-bottom: 2px;
 }
 
+.tpl-thumb-stage {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.tpl-thumb-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid;
+  padding: 16px 10px 12px;
+  text-align: center;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+}
+
+.tpl-thumb-card .invite-corner-svg {
+  width: 72px;
+  height: 72px;
+}
+
+.tpl-thumb-card .invite-crest-svg {
+  width: 58px;
+  height: 40px;
+  margin-bottom: 2px;
+}
+
 @media (max-width: 520px) {
   .invite-corner-svg {
     width: 130px;
