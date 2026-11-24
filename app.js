@@ -936,17 +936,20 @@ function renderPricingShowcase(pricingData) {
 const PRICING_CACHE_KEY = 'nikahplan_public_pricing_v1';
 
 async function loadPublicPricing() {
+  let renderedFromCache = false;
   try {
     const raw = sessionStorage.getItem(PRICING_CACHE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.pricing && Date.now() - Number(parsed.ts || 0) < 120000) {
         renderPricingShowcase(parsed.pricing);
-        return;
+        renderedFromCache = true;
       }
     }
   } catch {}
-  renderPricingShowcase(getDefaultPricing());
+  if (!renderedFromCache) {
+    renderPricingShowcase(getDefaultPricing());
+  }
   try {
     const res = await apiCall('publicPricing', {});
     if (res && res.pricing) {
@@ -956,7 +959,7 @@ async function loadPublicPricing() {
       } catch {}
     }
   } catch (e) {
-    // Keep default pricing silently if offline or backend not yet updated
+    // Keep default/cached pricing silently if offline or backend not yet updated
   }
 }
 
