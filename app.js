@@ -2915,14 +2915,27 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     if (!getTierCaps().aiPlanner || !window.NikahAiPlanner) return;
     const prompt = ($('ai-plan-prompt')?.value || '').trim();
+    const fb = $('ai-plan-feedback');
+    if (fb) {
+      fb.textContent = '';
+      fb.classList.add('hidden');
+    }
     if (!prompt) return;
     const btn = $('btn-ai-generate');
     withButtonLock(btn, 'AI sedang merancang...', async () => {
       await new Promise((r) => setTimeout(r, 850));
-      const plan = window.NikahAiPlanner.generatePlanFromPrompt(prompt);
-      window.NikahAiPlanner.savePlan(state.user?.id, plan);
-      renderAiPlans();
-      showToast('Rencana AI berhasil dibuat & disimpan!');
+      try {
+        const plan = window.NikahAiPlanner.generatePlanFromPrompt(prompt);
+        window.NikahAiPlanner.savePlan(state.user?.id, plan);
+        renderAiPlans();
+        showToast('Rencana AI berhasil dibuat & disimpan!');
+      } catch (err) {
+        if (fb) {
+          fb.textContent = err.message;
+          fb.classList.remove('hidden');
+        }
+        showToast(err.message, true);
+      }
     });
   });
 

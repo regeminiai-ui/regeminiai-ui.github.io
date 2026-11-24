@@ -196,6 +196,23 @@
     return JAVA_REGIONS.find((r) => r.keywords.some((kw) => lower.includes(kw))) || null;
   }
 
+  const WEDDING_TOPIC_KEYWORDS = [
+    'nikah', 'pernikahan', 'wedding', 'kawin', 'akad', 'resepsi', 'lamaran', 'tunangan',
+    'walimah', 'pengantin', 'mempelai', 'tamu', 'undangan', 'rsvp', 'budget', 'anggaran',
+    'biaya', 'dana', 'katering', 'catering', 'dekor', 'dekorasi', 'venue', 'gedung',
+    'pendopo', 'joglo', 'mua', 'rias', 'kebaya', 'beskap', 'souvenir', 'mahar',
+    'seserahan', 'hantaran', 'penghulu', 'rundown', 'organizer', 'vendor', 'dokumentasi',
+    'prewed', 'prewedding', 'siraman', 'panggih', 'midodareni', 'saweran', 'prasmanan',
+    'gubukan', 'pelaminan', 'janur', 'gebyok', 'check-in', 'checkin', 'rencana', 'konsep',
+  ];
+
+  function isWeddingRelatedPrompt(text) {
+    const lower = String(text || '').toLowerCase();
+    if (parseBudgetIdr(text) > 0 || parseGuestCount(text) > 0) return true;
+    if (CONCEPT_CATALOG.some((c) => c.keywords.some((kw) => lower.includes(kw)))) return true;
+    return WEDDING_TOPIC_KEYWORDS.some((kw) => lower.includes(kw));
+  }
+
   function detectConcepts(text) {
     const lower = text.toLowerCase();
     const matched = CONCEPT_CATALOG.filter((c) => c.keywords.some((kw) => lower.includes(kw)));
@@ -262,7 +279,10 @@
 
   function generatePlanFromPrompt(promptText) {
     const cleanPrompt = String(promptText || '').trim();
-    if (!cleanPrompt) throw new Error('Ceritakan dulu konsep pernikahan yang Anda inginkan.');
+    if (!cleanPrompt) throw new Error('Mohon tuliskan terlebih dahulu konsep atau pertanyaan seputar rencana pernikahan Anda.');
+    if (!isWeddingRelatedPrompt(cleanPrompt)) {
+      throw new Error('Mohon maaf, permintaan tersebut tidak termasuk dalam layanan kami. Silakan tanyakan atau sampaikan hal yang menyangkut rencana dan manajemen pernikahan Anda.');
+    }
 
     const region = detectRegion(cleanPrompt);
     const concepts = detectConcepts(cleanPrompt);
