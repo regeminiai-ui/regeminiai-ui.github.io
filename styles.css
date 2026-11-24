@@ -458,7 +458,7 @@ h1, h2, h3, .brand-title {
 }
 
 .auth-wrapper.with-pricing {
-  align-items: flex-start;
+  align-items: stretch;
   max-width: 1640px;
   padding: 20px 14px;
   gap: 18px;
@@ -468,14 +468,21 @@ h1, h2, h3, .brand-title {
 .auth-wrapper.with-pricing .auth-card {
   flex-shrink: 0;
   width: 340px;
-  position: sticky;
-  top: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 .pricing-showcase {
   flex: 1;
   min-width: 0;
   max-width: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.pricing-showcase .pricing-grid {
+  flex: 1;
+  padding: 0;
 }
 
 @media (min-width: 1180px) {
@@ -611,9 +618,7 @@ h1, h2, h3, .brand-title {
 
 @media (min-width: 768px) {
   .pricing-card.is-best-seller {
-    margin: -12px -4px;
-    padding: 30px 22px;
-    height: calc(100% + 24px);
+    z-index: 2;
   }
 }
 
